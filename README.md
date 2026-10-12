@@ -78,8 +78,8 @@ Ushbu platforma foydalanuvchi taqdim etgan dizayn konsepti asosida to‘liq 1:1 
 
 1. Ushbu omborni klonlang:
    ```bash
-   git clone https://github.com/azamatkarimov3421-create/antivirus-news.git
-   cd antivirus-news
+   git clone https://github.com/azamatkarimov3421-create/antivirus-news-app.git
+   cd antivirus-news-app
    ```
 
 2. Brauzerda ochish:
