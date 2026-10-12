@@ -1,18 +1,10 @@
-// Vercel Build Script — Statik fayllarni dist papkasiga tayyorlash
+// Vercel Build Script — Fayllarni public va dist papkalariga tayyorlash
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const distDir = path.join(__dirname, 'dist');
-
-// dist papkasini tozalash yoki yaratish
-if (fs.existsSync(distDir)) {
-  fs.rmSync(distDir, { recursive: true, force: true });
-}
-fs.mkdirSync(distDir, { recursive: true });
 
 function copyRecursiveSync(src, dest) {
   const exists = fs.existsSync(src);
@@ -30,16 +22,29 @@ function copyRecursiveSync(src, dest) {
   }
 }
 
-// Kerakli fayl va papkalarni dist ga nusxalash
 const itemsToCopy = ['index.html', 'css', 'js', 'assets', 'vercel.json'];
 
-itemsToCopy.forEach((item) => {
-  const srcPath = path.join(__dirname, item);
-  const destPath = path.join(distDir, item);
-  if (fs.existsSync(srcPath)) {
-    copyRecursiveSync(srcPath, destPath);
-    console.log(`Copied: ${item} -> dist/${item}`);
+// Ham public, ham dist papkalarini yaratish va to'ldirish
+const targets = [
+  path.join(__dirname, 'public'),
+  path.join(__dirname, 'dist')
+];
+
+targets.forEach((targetDir) => {
+  if (fs.existsSync(targetDir)) {
+    fs.rmSync(targetDir, { recursive: true, force: true });
   }
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  itemsToCopy.forEach((item) => {
+    const srcPath = path.join(__dirname, item);
+    const destPath = path.join(targetDir, item);
+    if (fs.existsSync(srcPath)) {
+      copyRecursiveSync(srcPath, destPath);
+    }
+  });
+
+  console.log(`✅ Files successfully copied to: ${path.basename(targetDir)}`);
 });
 
-console.log('✅ Build successful! All files copied to dist/');
+console.log('🚀 Build finished cleanly for Vercel!');

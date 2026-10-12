@@ -1,0 +1,1063 @@
+/* ==========================================================================
+   ANTIVIRUS NEWS — Mobil Ilova Dizayni (Faqat Telefon Uchun)
+   Asosiy Ranglar: Qizil (#E50914), Qora (#0E1117), Oq (#FFFFFF)
+   Rejimlar: Dark Mode va Light Mode
+   ========================================================================== */
+
+:root {
+  /* Korporativ Ranglar */
+  --an-red: #E50914;
+  --an-red-light: #FF2633;
+  --an-red-dark: #B3000B;
+  --an-red-glow: rgba(229, 9, 20, 0.45);
+  --an-red-subtle: rgba(229, 9, 20, 0.12);
+
+  /* Kategoriya Ranglari */
+  --cat-siyosat: #E50914;
+  --cat-dunyo: #2563EB;
+  --cat-jamiyat: #E50914;
+  --cat-biznes: #EA580C;
+  --cat-texno: #0284C7;
+  --cat-sport: #16A34A;
+  --cat-video: #E50914;
+  --cat-trend: #8B5CF6;
+  --cat-tahlil: #64748B;
+  --cat-foto: #059669;
+
+  /* Fontlar va O'lchamlar */
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --app-max-width: 430px;
+  --app-height: 100dvh;
+}
+
+/* --------------------------------------------------------------------------
+   DARK MODE (Standart qoramtir mavzu — rasmdagi o'ng tomon)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  --bg-app: #0D0F14;
+  --bg-card: #151821;
+  --bg-card-subtle: #191D28;
+  --bg-card-hover: #1F2432;
+  --bg-input: #151922;
+  --bg-bottom-nav: #0E1117;
+
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.14);
+
+  --text-main: #FFFFFF;
+  --text-sub: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #0D0F14;
+
+  --icon-color: #CBD5E1;
+  --pill-bg: #181D26;
+  --pill-active-bg: rgba(229, 9, 20, 0.22);
+  --pill-active-text: #FF4D55;
+
+  --phone-shell-bg: #16181F;
+  --phone-shell-border: #2B3040;
+  --shadow-device: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+   LIGHT MODE (Yorug' mavzu — rasmdagi chap tomon)
+   -------------------------------------------------------------------------- */
+[data-theme="light"] {
+  --bg-app: #FFFFFF;
+  --bg-card: #F4F6F9;
+  --bg-card-subtle: #EBEFF5;
+  --bg-card-hover: #E2E8F0;
+  --bg-input: #F1F4F9;
+  --bg-bottom-nav: #FFFFFF;
+
+  --border-light: rgba(0, 0, 0, 0.07);
+  --border-medium: rgba(0, 0, 0, 0.12);
+
+  --text-main: #0F172A;
+  --text-sub: #475569;
+  --text-muted: #8E9CAE;
+  --text-inverse: #FFFFFF;
+
+  --icon-color: #334155;
+  --pill-bg: #F1F4F9;
+  --pill-active-bg: #FEE2E2;
+  --pill-active-text: #E50914;
+
+  --phone-shell-bg: #E2E8F0;
+  --phone-shell-border: #CBD5E1;
+  --shadow-device: 0 25px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px #CBD5E1;
+}
+
+/* Global Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  font-family: var(--font-family);
+  background-color: #050608;
+  color: var(--text-main);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  user-select: auto;
+}
+
+/* --------------------------------------------------------------------------
+   TELEFON KORPUSI / DEVICE VIEWPORT
+   Telefonda 100% to'liq ekran, Desktopda esa chiroyli smartfon
+   -------------------------------------------------------------------------- */
+.phone-viewport-container {
+  width: 100%;
+  height: 100%;
+  max-width: var(--app-max-width);
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--bg-app);
+  overflow: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Kompyuter ekranida telefon maketi chegaralari */
+@media (min-width: 481px) {
+  .phone-viewport-container {
+    height: 92vh;
+    border-radius: 46px;
+    border: 8px solid var(--phone-shell-border);
+    box-shadow: var(--shadow-device);
+  }
+}
+
+@media (max-width: 480px) {
+  .phone-viewport-container {
+    max-width: 100%;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   TELEFON STATUS BARI (19:10, Notch/Dynamic Island, 5G, Batareya)
+   -------------------------------------------------------------------------- */
+.mobile-status-bar {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  z-index: 100;
+  position: relative;
+}
+
+.status-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+
+.status-island {
+  width: 90px;
+  height: 22px;
+  background: #000000;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.status-island-lens {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0D1117;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-indicators {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-main);
+  font-size: 11px;
+}
+
+/* --------------------------------------------------------------------------
+   MOBIL HEADER (AN Logo, ANTIVIRUS NEWS, Qidiruv, Bildirishnoma, Theme)
+   -------------------------------------------------------------------------- */
+.mobile-header {
+  padding: 4px 18px 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 50;
+}
+
+.brand-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Rasmdagi o'ziga xos qizil "AN" logotipi */
+.brand-an-symbol {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--an-red);
+  letter-spacing: -2px;
+  line-height: 1;
+  text-shadow: 0 2px 8px var(--an-red-glow);
+}
+
+.brand-text-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.brand-name-main {
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-main);
+}
+
+.brand-name-sub {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.header-action-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-tool-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--icon-color);
+  position: relative;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.header-tool-btn:active {
+  transform: scale(0.92);
+}
+
+.badge-dot-alert {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  background: var(--an-red);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-app);
+}
+
+/* --------------------------------------------------------------------------
+   GORIZONTAL TOIFALAR PANELI (Horizontal Scrollable Tabs)
+   Asosiy, Siyosat, Dunyo, Jamiyat, Biznes, Sport
+   -------------------------------------------------------------------------- */
+.mobile-tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 18px 10px 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-pill-item {
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--text-sub);
+  padding-bottom: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.tab-pill-item.active {
+  color: var(--an-red) !important;
+}
+
+.tab-pill-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--an-red);
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   MOBIL ASOSIY SKROLLABLE HUDUD (Scroll Container)
+   -------------------------------------------------------------------------- */
+.mobile-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 20px 16px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-content-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   KATTA SLAYDER KARTASI (HERO CARD)
+   Rasmdagi Mirziyoyev & Berdimuhamedov kartasi
+   -------------------------------------------------------------------------- */
+.mobile-hero-slider {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  background-color: #000;
+}
+
+.hero-slider-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.mobile-hero-slider:active .hero-slider-img {
+  transform: scale(1.03);
+}
+
+.hero-slider-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.1) 100%);
+}
+
+.hero-slider-body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 14px;
+  color: #FFFFFF;
+}
+
+.hero-category-badge {
+  background: var(--an-red);
+  color: #FFFFFF;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 5px;
+  display: inline-block;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  letter-spacing: 0.6px;
+}
+
+.hero-headline-title {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  color: #FFFFFF;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hero-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-meta-left span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hero-pagination-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pag-dot-active {
+  width: 14px;
+  height: 5px;
+  border-radius: 4px;
+  background: var(--an-red);
+}
+
+.pag-dot-normal {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* --------------------------------------------------------------------------
+   6 TA TEZKOR TOIFA TUGMALARI (Quick Category Grid)
+   Siyosat, Dunyo, Jamiyat, Biznes, Sport, Barchasi
+   -------------------------------------------------------------------------- */
+.mobile-category-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.cat-grid-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 2px;
+  border-radius: 14px;
+  background: var(--pill-bg);
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.cat-grid-card:active {
+  transform: scale(0.94);
+}
+
+.cat-grid-card.active-selected {
+  background: var(--pill-active-bg) !important;
+  color: var(--pill-active-text) !important;
+}
+
+.cat-grid-icon-box {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cat-grid-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   SO'NGGI YANGILIKLAR RO'YXATI
+   Rasmdagi Chery Tiggo, Samarqand stomatologiya, Honor X9e Pro
+   -------------------------------------------------------------------------- */
+.mobile-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-title-text {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.section-link-more {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--an-red);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.news-stream-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.news-stream-card {
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: opacity 0.15s ease;
+}
+
+.news-stream-card:active {
+  opacity: 0.7;
+}
+
+.news-stream-thumb {
+  width: 92px;
+  height: 66px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: var(--bg-card);
+}
+
+.news-stream-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.news-stream-title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-main);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.news-stream-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.news-stream-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   "BARCHASI" (MENYU) EKRANI (Rasmdagi 2-ekran)
+   -------------------------------------------------------------------------- */
+.mobile-menu-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 0 18px 20px 18px;
+  scrollbar-width: none;
+}
+
+.menu-viewport-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 16px 0;
+}
+
+.menu-title-large {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.menu-items-vertical-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 22px;
+}
+
+.menu-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 4px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.menu-item-row:active {
+  background: var(--bg-card);
+}
+
+.menu-item-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.menu-item-icon-box {
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-item-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.menu-item-chevron {
+  color: var(--text-muted);
+}
+
+/* Brend Axborot Kartasi */
+.brand-identity-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  margin-bottom: 18px;
+  transition: transform 0.15s ease;
+}
+
+.brand-identity-card:active {
+  transform: scale(0.98);
+}
+
+.brand-round-badge-an {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FF2633 0%, #A3020B 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: -1px;
+  box-shadow: 0 4px 12px var(--an-red-glow);
+  flex-shrink: 0;
+}
+
+.brand-identity-texts {
+  flex: 1;
+}
+
+.brand-identity-title {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.brand-identity-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Ijtimoiy Tarmoqlar 4 ta Doiraviy Tugma */
+.social-network-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px 0 16px 0;
+}
+
+.social-network-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.social-network-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.social-network-item:active .social-network-circle {
+  transform: scale(0.92);
+}
+
+.social-network-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sn-tg { background: #229ED9; }
+.sn-yt { background: #FF0000; }
+.sn-tt { background: #000000; border: 1px solid rgba(255, 255, 255, 0.15); }
+.sn-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
+
+/* --------------------------------------------------------------------------
+   PASTKI NAVIGATSIYA (BOTTOM NAVIGATION BAR)
+   Asosiy, Trend, Markaziy 3D AN Tugmasi, Video, Barchasi
+   -------------------------------------------------------------------------- */
+.mobile-bottom-bar {
+  height: 72px;
+  min-height: 72px;
+  padding: 0 16px 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-bottom-nav);
+  border-top: 1px solid var(--border-light);
+  position: relative;
+  z-index: 90;
+}
+
+.bottom-nav-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 52px;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.bottom-nav-action.active {
+  color: var(--an-red) !important;
+}
+
+.bottom-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-action-label {
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+/* MARKAZIY 3D QIZIL "AN" FLOATING TUGMASI */
+.center-floating-an-btn {
+  position: relative;
+  top: -14px;
+  cursor: pointer;
+}
+
+.center-floating-an-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FF2633 0%, #A3020B 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: -1.5px;
+  box-shadow: 0 6px 18px var(--an-red-glow), 0 0 0 3px rgba(229, 9, 20, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.center-floating-an-btn:active .center-floating-an-circle {
+  transform: scale(0.92);
+  box-shadow: 0 2px 8px var(--an-red-glow);
+}
+
+/* Home Indicator (iPhone pastki chizig'i) */
+.home-indicator-bar {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--text-main);
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------------------
+   MOBIL MAQOLA SAHIFASI / O'QISH OYNASI
+   -------------------------------------------------------------------------- */
+.mobile-article-view {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-app);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: 40px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.article-view-top-nav {
+  position: sticky;
+  top: 0;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-light);
+  z-index: 10;
+}
+
+.article-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--an-red);
+}
+
+.article-cover-box {
+  width: 100%;
+  height: 230px;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.article-cover-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.article-detail-body {
+  padding: 18px 16px;
+}
+
+.article-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.article-detail-title {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--text-main);
+  margin-bottom: 14px;
+}
+
+.article-lead-quote {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--text-sub);
+  border-left: 3px solid var(--an-red);
+  padding-left: 12px;
+  margin-bottom: 18px;
+}
+
+.article-main-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-main);
+  white-space: pre-line;
+  margin-bottom: 24px;
+}
+
+.article-audio-listen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.listen-btn {
+  background: var(--an-red);
+  color: #FFF;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   MOBIL TEZKOR YANGILIK QO'SHISH (QUICK ADMIN MODAL)
+   -------------------------------------------------------------------------- */
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-sheet-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-sheet-container {
+  width: 100%;
+  max-width: var(--app-max-width);
+  background: var(--bg-app);
+  border-radius: 24px 24px 0 0;
+  padding: 20px 18px 30px 18px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-medium);
+}
+
+.sheet-handle-bar {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.5;
+  margin: 0 auto 16px auto;
+}
+
+.sheet-field {
+  margin-bottom: 14px;
+}
+
+.sheet-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.sheet-input, .sheet-select, .sheet-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+}
+
+.sheet-submit-btn {
+  width: 100%;
+  background: var(--an-red);
+  color: #FFF;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+/* Toast xabarlar */
+.mobile-toast {
+  position: fixed;
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #11141D;
+  color: #FFFFFF;
+  padding: 9px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--an-red);
+  font-size: 11.5px;
+  font-weight: 700;
+  z-index: 300;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  animation: fadeInDown 0.25s ease;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
