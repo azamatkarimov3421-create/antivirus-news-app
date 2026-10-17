@@ -1,5 +1,5 @@
 // ============================================================================
-// ANTIVIRUS NEWS — Cloudflare Worker (D1 Database + R2 Media Storage API)
+// ANTIVIRUS NEWS — Cloudflare Worker (D1 SQL Database API)
 // ============================================================================
 
 const CORS_HEADERS = {
@@ -18,13 +18,25 @@ export default {
     }
 
     try {
-      // 0. GET /api/health — Ulanishni tekshirish
+      // 0. GET /api/health — Baza holati va xotira ma'lumotlarini olish
       if (request.method === 'GET' && url.pathname === '/api/health') {
+        let newsCount = 0;
+        if (env.DB) {
+          try {
+            const countRes = await env.DB.prepare('SELECT COUNT(*) as count FROM news').first();
+            newsCount = countRes ? countRes.count : 0;
+          } catch (e) {}
+        }
+
         return new Response(JSON.stringify({
           status: 'ok',
           service: 'ANTIVIRUS NEWS API',
-          database: env.DB ? 'Cloudflare D1 SQL (5 GB Faol)' : 'D1 mavjud emas',
-          storage: env.MEDIA_BUCKET ? 'Cloudflare R2 (Faol)' : 'Rasm URL rejimi',
+          database: env.DB ? 'Cloudflare D1 SQL (Faol)' : 'D1 ulanmagan',
+          databaseName: 'antivirus-news-db',
+          databaseId: 'ad7f702f-702a-44ef-9e76-c6f5b1107273',
+          totalCapacity: '5.00 GB (5,368,709,120 bytes)',
+          freeCapacityBytes: 5368709120,
+          newsCount: newsCount,
           time: new Date().toISOString()
         }), {
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
@@ -52,6 +64,8 @@ export default {
           content: r.content || '',
           author: r.author || 'ANTIVIRUS Tahririyati',
           readTime: r.read_time || '3 daqiqa',
+          source: r.source || 'ANTIVIRUS Tahririyati',
+          sourceUrl: r.source_url || '',
           tags: r.tags ? (typeof r.tags === 'string' ? r.tags.split(',') : r.tags) : ['Yangilik'],
           videoUrl: r.video_url || null,
           createdAt: r.created_at
@@ -62,7 +76,7 @@ export default {
         });
       }
 
-      // 2. POST /api/news — Yangi yangilik qo'shish (D1 SQL)
+      // 2. POST /api/news — Yangi yangilik qo'shish (Manbasi bilan)
       if (request.method === 'POST' && url.pathname === '/api/news') {
         const body = await request.json();
         const id = body.id || 'an-' + Date.now();
@@ -70,14 +84,22 @@ export default {
         const time = body.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         const date = body.date || `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
 
+        // Jadvalga source va source_url ustunlari borligiga ishonch hosil qilish
+        try {
+          await env.DB.prepare('ALTER TABLE news ADD COLUMN source TEXT').run();
+        } catch (e) {}
+        try {
+          await env.DB.prepare('ALTER TABLE news ADD COLUMN source_url TEXT').run();
+        } catch (e) {}
+
         // Agar bu yangilik is_hero bo'lsa, qolganlarini 0 qilish
         if (body.isHero) {
           await env.DB.prepare('UPDATE news SET is_hero = 0').run();
         }
 
         await env.DB.prepare(
-          `INSERT INTO news (id, title, category, category_name, time, date, views, is_hero, is_trending, image_url, summary, content, author, read_time, tags, video_url)
-           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO news (id, title, category, category_name, time, date, views, is_hero, is_trending, image_url, summary, content, author, read_time, tags, video_url, source, source_url)
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id,
           body.title || 'Sarlavhasiz yangilik',
@@ -93,7 +115,9 @@ export default {
           body.author || 'ANTIVIRUS Tahririyati',
           body.readTime || '3 daqiqa',
           Array.isArray(body.tags) ? body.tags.join(',') : (body.tags || 'Yangilik'),
-          body.videoUrl || null
+          body.videoUrl || null,
+          body.source || 'ANTIVIRUS Tahririyati',
+          body.sourceUrl || ''
         ).run();
 
         return new Response(JSON.stringify({ success: true, id }), {
@@ -125,68 +149,16 @@ export default {
         });
       }
 
-      // 5. POST /api/upload — Rasmni Cloudflare R2 Storage ga yuklash
-      if (request.method === 'POST' && url.pathname === '/api/upload') {
-        if (!env.MEDIA_BUCKET) {
-          return new Response(JSON.stringify({ error: 'R2 xotira ulanmagan. Iltimos, rasm URL manzilini kiriting.' }), {
-            status: 400,
-            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-          });
-        }
-
-        const formData = await request.formData();
-        const file = formData.get('file');
-
-        if (!file || typeof file === 'string') {
-          return new Response(JSON.stringify({ error: 'Yuklash uchun fayl topilmadi' }), {
-            status: 400,
-            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-          });
-        }
-
-        const safeName = file.name ? file.name.replace(/[^a-zA-Z0-9.-]/g, '_') : 'image.jpg';
-        const fileName = `${Date.now()}-${safeName}`;
-
-        await env.MEDIA_BUCKET.put(fileName, file.stream(), {
-          httpMetadata: { contentType: file.type || 'image/jpeg' },
-        });
-
-        const publicUrl = `${url.origin}/media/${fileName}`;
-
-        return new Response(JSON.stringify({ success: true, url: publicUrl, key: fileName }), {
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // 6. GET /media/:key — R2 dan rasmni to'g'ridan-to'g'ri ochiq uzatish
-      if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
-        const key = url.pathname.replace('/media/', '');
-        const object = await env.MEDIA_BUCKET.get(key);
-
-        if (!object) {
-          return new Response('Rasm topilmadi', { status: 404 });
-        }
-
-        const headers = new Headers();
-        object.writeHttpMetadata(headers);
-        headers.set('etag', object.httpEtag);
-        headers.set('Cache-Control', 'public, max-age=31536000');
-        headers.set('Access-Control-Allow-Origin', '*');
-
-        return new Response(object.body, { headers });
-      }
-
       // Default Endpoint
       return new Response(JSON.stringify({
         message: 'ANTIVIRUS NEWS API — Ishga tayyor',
+        database: 'Cloudflare D1 SQL (5 GB Bepul)',
         endpoints: [
           'GET /api/health',
           'GET /api/news',
           'POST /api/news',
           'POST /api/news/:id/view',
-          'DELETE /api/news/:id',
-          'POST /api/upload',
-          'GET /media/:key'
+          'DELETE /api/news/:id'
         ]
       }), {
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

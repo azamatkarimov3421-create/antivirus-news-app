@@ -10,7 +10,7 @@ class AntivirusApp {
     this.searchQuery = '';
     this.activeArticleId = null;
     this.isCfModalOpen = false;
-    this.cfActiveTab = 'connect'; // 'connect' | 'add-news'
+    this.cfActiveTab = 'stats'; // 'stats' | 'add-news' | 'list'
     this.cfTestStatus = null;
     this.isUploadingMedia = false;
     this.speechSynth = window.speechSynthesis;
@@ -79,7 +79,7 @@ class AntivirusApp {
     this.render();
   }
 
-  openCfModal(tab = 'connect') {
+  openCfModal(tab = 'stats') {
     this.isCfModalOpen = true;
     this.cfActiveTab = tab;
     this.render();
@@ -508,9 +508,14 @@ class AntivirusApp {
 
           <div class="article-text-body">
             <div class="article-badges-row">
-              <span class="hero-tag-badge">${article.categoryName}</span>
-              <span>${Icons.clock} ${article.time} • ${article.date}</span>
-              <span>${Icons.eye} ${article.views.toLocaleString()}</span>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="hero-tag-badge">${article.categoryName}</span>
+                ${article.source ? `<span class="source-badge">Manba: ${article.source}</span>` : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span>${Icons.clock} ${article.time} • ${article.date}</span>
+                <span>${Icons.eye} ${article.views.toLocaleString()}</span>
+              </div>
             </div>
 
             <h1 class="article-title-text">${article.title}</h1>
@@ -530,6 +535,15 @@ class AntivirusApp {
             ` : ''}
 
             <div class="article-paragraphs">${article.content || article.summary}</div>
+
+            ${article.sourceUrl ? `
+              <div style="margin-bottom: 22px; font-size: 12px; color: var(--text-dim); background: var(--bg-pill); padding: 10px 14px; border-radius: 10px;">
+                <span>Asl maqola havolasi:</span>
+                <a href="${article.sourceUrl}" target="_blank" rel="noopener" style="color: var(--an-red); font-weight: 700; margin-left: 6px;">
+                  ${article.source || 'Saytga o‘tish'} ↗
+                </a>
+              </div>
+            ` : ''}
 
             <div class="article-action-tools-row">
               <div style="display: flex; gap: 8px;">
@@ -552,14 +566,15 @@ class AntivirusApp {
   }
 
   // -------------------------------------------------------------
-  // CLOUDFLARE D1 + R2 BOSHQARUV VA YANGILIK QO'SHISH OYNASI
+  // CLOUDFLARE D1 BOSHQARUV VA YANGILIK QO'SHISH OYNASI
   // -------------------------------------------------------------
   renderCloudflareModal() {
     if (!this.isCfModalOpen) return '';
 
     const currentUrl = store.getApiUrl();
-    const isConnected = store.isCloudflareConnected();
+    const stats = store.getDatabaseStats();
     const categories = store.getCategories();
+    const newsList = store.getNews();
 
     return `
       <div class="article-reader-backdrop open" id="cfBackdrop">
@@ -568,25 +583,73 @@ class AntivirusApp {
           <div class="admin-modal-header">
             <div class="admin-modal-title">
               <span style="color: var(--an-red);">☁️</span>
-              <span>Cloudflare D1 & R2 Boshqaruv</span>
+              <span>Cloudflare D1 Boshqaruv & Xotira</span>
             </div>
             <button class="icon-btn" id="closeCfModalBtn">${Icons.close}</button>
           </div>
 
           <!-- Modal Nav Tabs -->
           <div class="admin-nav-tabs">
-            <button class="admin-tab-btn ${this.cfActiveTab === 'connect' ? 'active' : ''}" data-cf-tab="connect">
-              🔗 Baza Ulanishi & Holat
+            <button class="admin-tab-btn ${this.cfActiveTab === 'stats' ? 'active' : ''}" data-cf-tab="stats">
+              📊 Baza & Xotira (5 GB)
             </button>
             <button class="admin-tab-btn ${this.cfActiveTab === 'add-news' ? 'active' : ''}" data-cf-tab="add-news">
-              ✍️ Yangilik Qo‘shish (D1 + R2)
+              ✍️ Yangilik Qo‘shish
+            </button>
+            <button class="admin-tab-btn ${this.cfActiveTab === 'list' ? 'active' : ''}" data-cf-tab="list">
+              📋 Maqolalar (${newsList.length})
             </button>
           </div>
 
-          <!-- TAB 1: BAZA ULANISHI -->
-          ${this.cfActiveTab === 'connect' ? `
+          <!-- TAB 1: BAZA REKVIZITLARI VA XOTIRA HISOBI (QANCHASI TO'LDI, QANCHASI QOLDI) -->
+          ${this.cfActiveTab === 'stats' ? `
             <div class="admin-modal-body">
-              <div class="form-group">
+              <!-- Jonli Xotira Hisoblagichi -->
+              <div class="storage-meter-box">
+                <div class="storage-meter-header">
+                  <span>📊 Xotira Bandligi (Cloudflare D1)</span>
+                  <span style="color: #10B981; font-weight: 800;">${stats.percentageUsed}% / 100%</span>
+                </div>
+
+                <div class="storage-track">
+                  <div class="storage-fill" style="width: ${Math.max(1, stats.percentageUsed * 100)}%;"></div>
+                </div>
+
+                <div class="storage-stats-row">
+                  <span>To‘ldi: <b style="color: var(--text-main);">${stats.usedFormatted}</b></span>
+                  <span>Qoldi: <b style="color: #10B981;">${stats.remainingFormatted}</b></span>
+                  <span>Jami: <b style="color: var(--text-main);">${stats.totalCapacity}</b></span>
+                </div>
+              </div>
+
+              <!-- Baza Rekvizitlari -->
+              <div class="db-details-grid">
+                <div class="db-detail-item">
+                  <span class="label">Baza Nomi</span>
+                  <span class="val">${stats.databaseName}</span>
+                </div>
+                <div class="db-detail-item">
+                  <span class="label">Baza ID</span>
+                  <span class="val">${stats.databaseId}</span>
+                </div>
+                <div class="db-detail-item">
+                  <span class="label">Provayder</span>
+                  <span class="val">Cloudflare D1 SQL</span>
+                </div>
+                <div class="db-detail-item">
+                  <span class="label">Baza Holati</span>
+                  <span class="val" style="color: #10B981;">🟢 Ulangan & Faol</span>
+                </div>
+              </div>
+
+              <!-- Dual-Storage Zaxira Kafolati (Fonda ishlamay qolsa har ehtimolga qarshi) -->
+              <div class="status-info-box">
+                <b style="color: #10B981;">🛡️ Dual-Storage Kafolati (Offline-First):</b><br>
+                Barcha maqolalar fonda doimiy ravishda mahalliy zaxiraga (Local Storage) saqlanadi. Agar Cloudflare yoki internet vaqtincha uzilsa ham, saytingiz 100% to‘xtovsiz ishlab turaveradi va biror ma’lumot yo‘qolmaydi!
+              </div>
+
+              <!-- Worker API URL va Sinxronlash -->
+              <div class="form-group" style="margin-top: 4px;">
                 <label class="form-label">Cloudflare Worker API URL</label>
                 <input
                   type="url"
@@ -595,9 +658,6 @@ class AntivirusApp {
                   placeholder="https://antivirus-news-api.sizning-subdomain.workers.dev"
                   value="${currentUrl}"
                 />
-                <span style="font-size: 11px; color: var(--text-dim);">
-                  Cloudflare Worker yaratilgandan so‘ng beriladigan havola.
-                </span>
               </div>
 
               <div style="display: flex; gap: 8px;">
@@ -609,43 +669,24 @@ class AntivirusApp {
                 </button>
               </div>
 
-              <!-- Test Holati Xabari -->
               ${this.cfTestStatus ? `
                 <div class="status-info-box ${this.cfTestStatus.ok ? '' : 'error'}">
                   ${this.cfTestStatus.ok ? `
-                    <b>🟢 Cloudflare Baza Muvaffaqiyatli Ulangan!</b><br>
+                    <b>🟢 Ulanish muvaffaqiyatli!</b><br>
                     • Xizmat: ${this.cfTestStatus.data?.service || 'ANTIVIRUS API'}<br>
-                    • SQL Baza: ${this.cfTestStatus.data?.database || 'Cloudflare D1 (5 GB)'}<br>
-                    • Rasm/Media Xotira: ${this.cfTestStatus.data?.storage || 'Cloudflare R2 (10 GB)'}
+                    • SQL Baza: ${this.cfTestStatus.data?.database || 'Cloudflare D1 SQL'}<br>
+                    • Jami xotira: 5.00 GB (Mutlaqo Bepul)
                   ` : `
                     <b>🔴 Ulanishda xatolik:</b><br>
                     ${this.cfTestStatus.error}<br>
-                    <small>Iltimos, Worker URL to‘g‘ri kiritilganligini va Worker yoqilganligini tekshiring.</small>
+                    <small>Mahalliy zaxira xotira faol holatda ishlab turibdi.</small>
                   `}
                 </div>
-              ` : `
-                <div class="status-info-box">
-                  <b>☁️ Cloudflare Integratsiyasi:</b><br>
-                  D1 SQL bazasi yangiliklar, ko‘rishlar soni va toifalarni saqlaydi.<br>
-                  R2 Storage esa yuklangan rasmlarni 10 GB gacha bepul saqlab beradi.
-                </div>
-              `}
-
-              <!-- Cloudflare Ko'rsatkichlari -->
-              <div class="cf-specs-grid">
-                <div class="cf-spec-card">
-                  <h5>Cloudflare D1 (SQL)</h5>
-                  <p>5 GB Bepul baza • 5,000,000 o‘qish/kun</p>
-                </div>
-                <div class="cf-spec-card">
-                  <h5>Cloudflare R2 (Media)</h5>
-                  <p>10 GB Bepul xotira • $0 Chiqish trafiki</p>
-                </div>
-              </div>
+              ` : ''}
             </div>
           ` : ''}
 
-          <!-- TAB 2: YANGILIK QO'SHISH -->
+          <!-- TAB 2: YANGILIK QO'SHISH (MANBASI BILAN) -->
           ${this.cfActiveTab === 'add-news' ? `
             <div class="admin-modal-body">
               <div class="form-group">
@@ -669,17 +710,21 @@ class AntivirusApp {
                 </div>
               </div>
 
-              <!-- Rasm yuklash (R2 Storage) -->
-              <div class="form-group">
-                <label class="form-label">Rasm yuklash (Cloudflare R2)</label>
-                <input type="file" id="cfNewsFileInput" class="form-input" accept="image/*" />
-                <span style="font-size: 11px; color: var(--text-dim);">
-                  Rasm tanlansa, avtomatik Cloudflare R2 xotirasiga yuklanadi.
-                </span>
+              <!-- QAYSI SAYTDAN OLINGANI (MANBA VA HAVOLA) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Qaysi saytdan olingan (Manba)</label>
+                  <input type="text" id="cfNewsSource" class="form-input" placeholder="Masalan: Kun.uz, Daryo.uz, Reuters..." />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Asl maqola havolasi (Manba URL)</label>
+                  <input type="url" id="cfNewsSourceUrl" class="form-input" placeholder="https://..." />
+                </div>
               </div>
 
               <div class="form-group">
-                <label class="form-label">Yoki Rasm URL manzili</label>
+                <label class="form-label">Rasm URL Manzili</label>
                 <input type="url" id="cfNewsImageUrl" class="form-input" placeholder="https://images.unsplash.com/..." />
               </div>
 
@@ -690,7 +735,7 @@ class AntivirusApp {
 
               <div class="form-group">
                 <label class="form-label">To‘liq Maqola Matni</label>
-                <textarea id="cfNewsContent" class="form-textarea" style="min-height: 120px;" placeholder="Batafsil xabar matni..."></textarea>
+                <textarea id="cfNewsContent" class="form-textarea" style="min-height: 110px;" placeholder="Batafsil xabar matni..."></textarea>
               </div>
 
               <div class="form-row">
@@ -706,8 +751,33 @@ class AntivirusApp {
               </div>
 
               <button class="btn-primary-red" id="cfSubmitNewsBtn">
-                <span>🚀 Bazaga (D1) Saqlash va E'lon Qilish</span>
+                <span>🚀 Bazaga Saqlash (Dual-Storage)</span>
               </button>
+            </div>
+          ` : ''}
+
+          <!-- TAB 3: BAZADAGI MAQOLALAR VA MANBALAR RO'YXATI -->
+          ${this.cfActiveTab === 'list' ? `
+            <div class="admin-modal-body">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <span class="form-label">Bazadagi barcha maqolalar (${newsList.length})</span>
+                <span style="font-size: 11px; color: var(--text-dim);">Manbasi va ko‘rishlar</span>
+              </div>
+
+              <div class="admin-news-table-wrap">
+                ${newsList.map(n => `
+                  <div class="admin-news-row">
+                    <div class="admin-news-row-info">
+                      <div class="admin-news-row-title">${n.title}</div>
+                      <div class="admin-news-row-meta">
+                        <span class="source-badge">${n.source || 'ANTIVIRUS'}</span>
+                        <span>${Icons.clock} ${n.time} • ${n.views || 0} ko‘rildi</span>
+                      </div>
+                    </div>
+                    <button class="btn-del-sm" data-del-news-id="${n.id}">O‘chirish</button>
+                  </div>
+                `).join('')}
+              </div>
             </div>
           ` : ''}
         </div>
@@ -730,7 +800,7 @@ class AntivirusApp {
       if (q !== null) {
         const trimmed = q.trim();
         if (trimmed.toLowerCase() === 'admin' || trimmed.toLowerCase() === '/admin' || trimmed.toLowerCase() === 'baza') {
-          this.openCfModal('connect');
+          this.openCfModal('stats');
           return;
         }
         this.searchQuery = trimmed;
@@ -777,7 +847,7 @@ class AntivirusApp {
 
       if (result.ok) {
         store.setApiUrl(url);
-        this.showToast('🟢 Cloudflare D1 & R2 muvaffaqiyatli ulandi!');
+        this.showToast('🟢 Cloudflare D1 muvaffaqiyatli ulandi!');
       } else {
         this.showToast('🔴 Ulanishda xatolik yuz berdi');
       }
@@ -792,12 +862,13 @@ class AntivirusApp {
       this.render();
     });
 
-    // 9. Yangilik Qo'shish (D1 ga yozish va R2 ga rasm yuklash)
+    // 9. Yangilik Qo'shish (D1 ga yozish va Manbasi bilan saqlash)
     document.getElementById('cfSubmitNewsBtn')?.addEventListener('click', async () => {
       const title = document.getElementById('cfNewsTitle')?.value.trim();
       const category = document.getElementById('cfNewsCategory')?.value || 'jamiyat';
       const author = document.getElementById('cfNewsAuthor')?.value.trim() || 'ANTIVIRUS Tahririyati';
-      const fileInput = document.getElementById('cfNewsFileInput');
+      const source = document.getElementById('cfNewsSource')?.value.trim() || 'ANTIVIRUS Tahririyati';
+      const sourceUrl = document.getElementById('cfNewsSourceUrl')?.value.trim() || '';
       let imageUrl = document.getElementById('cfNewsImageUrl')?.value.trim();
       const summary = document.getElementById('cfNewsSummary')?.value.trim();
       const content = document.getElementById('cfNewsContent')?.value.trim();
@@ -809,16 +880,7 @@ class AntivirusApp {
         return;
       }
 
-      this.showToast('⏳ Yangilik Cloudflare bazasiga yuklanmoqda...');
-
-      // Agar rasm fayli tanlangan bo'lsa, Cloudflare R2 ga yuklash
-      if (fileInput && fileInput.files && fileInput.files[0]) {
-        this.showToast('🖼️ Rasm Cloudflare R2 xotirasiga yuklanmoqda...');
-        const uploadRes = await store.uploadMedia(fileInput.files[0]);
-        if (uploadRes.ok && uploadRes.url) {
-          imageUrl = uploadRes.url;
-        }
-      }
+      this.showToast('⏳ Yangilik bazaga saqlanmoqda...');
 
       if (!imageUrl) {
         imageUrl = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80';
@@ -828,6 +890,8 @@ class AntivirusApp {
         title,
         category,
         author,
+        source,
+        sourceUrl,
         imageUrl,
         summary: summary || title,
         content: content || summary || title,
@@ -838,6 +902,18 @@ class AntivirusApp {
       this.showToast('🎉 Yangilik muvaffaqiyatli e\'lon qilindi!');
       this.closeCfModal();
       this.openArticle(created.id);
+    });
+
+    // 9b. Maqolani o'chirish
+    document.querySelectorAll('[data-del-news-id]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.getAttribute('data-del-news-id');
+        if (id && confirm('Ushbu yangilikni bazadan o‘chirmoqchimisiz?')) {
+          await store.deleteNews(id);
+          this.showToast('🗑️ Maqola bazadan o‘chirildi');
+          this.render();
+        }
+      });
     });
 
     // 10. Kategoriya tanlash

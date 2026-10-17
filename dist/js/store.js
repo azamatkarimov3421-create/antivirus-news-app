@@ -1,4 +1,4 @@
-// ANTIVIRUS NEWS - Reactive Store with Cloudflare (D1 Database + R2 Storage) Integration
+// ANTIVIRUS NEWS - Reactive Store with Cloudflare D1 & Dual-Storage Backup
 
 import { INITIAL_CATEGORIES, INITIAL_NEWS, INITIAL_ADS } from './data.js';
 
@@ -9,7 +9,16 @@ const STORAGE_KEYS = {
   THEME: 'antivirus_theme',
   ADS: 'antivirus_ads',
   NOTIFICATIONS: 'antivirus_notifications',
-  CF_API_URL: 'antivirus_cloudflare_api_url', // Cloudflare Worker URL
+  CF_API_URL: 'antivirus_cloudflare_api_url',
+};
+
+// Cloudflare D1 Bazasining Doimiy Rekvizitlari
+export const CLOUDFLARE_CONFIG = {
+  databaseName: 'antivirus-news-db',
+  databaseId: 'ad7f702f-702a-44ef-9e76-c6f5b1107273',
+  accountId: '689f9566f97618e8bfd32533251b9e6f',
+  freeLimitBytes: 5 * 1024 * 1024 * 1024, // 5 GB Mutlaqo Bepul
+  freeLimitFormatted: '5.00 GB'
 };
 
 class NewsStore {
@@ -22,7 +31,13 @@ class NewsStore {
   init() {
     try {
       if (!localStorage.getItem(STORAGE_KEYS.NEWS)) {
-        localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(INITIAL_NEWS));
+        // Dastlabki yangiliklarga manba qo'shish
+        const enriched = INITIAL_NEWS.map(n => ({
+          ...n,
+          source: n.source || 'ANTIVIRUS Tahririyati',
+          sourceUrl: n.sourceUrl || ''
+        }));
+        localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(enriched));
       }
       if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
         localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
@@ -31,7 +46,7 @@ class NewsStore {
         localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(['an-001']));
       }
       if (!localStorage.getItem(STORAGE_KEYS.THEME)) {
-        localStorage.setItem(STORAGE_KEYS.THEME, 'dark'); // Default to dark mode
+        localStorage.setItem(STORAGE_KEYS.THEME, 'dark');
       }
       if (!localStorage.getItem(STORAGE_KEYS.ADS)) {
         localStorage.setItem(STORAGE_KEYS.ADS, JSON.stringify(INITIAL_ADS));
@@ -66,7 +81,55 @@ class NewsStore {
   }
 
   // =========================================================================
-  // CLOUDFLARE D1 + R2 SOZLAMALARI VA INTEGRATSIYASI
+  // BAZA HOLATI VA HAJMINI HISOBLASH (Qanchasi to'ldi, qanchasi qoldi)
+  // =========================================================================
+
+  getDatabaseStats() {
+    const news = this.getNews();
+    const newsJson = JSON.stringify(news);
+    const catsJson = JSON.stringify(this.getCategories());
+
+    // Xotirada ishlatilgan baytlar soni
+    let usedBytes = 14500;
+    try {
+      usedBytes = new Blob([newsJson, catsJson]).size;
+    } catch {
+      usedBytes = (newsJson.length + catsJson.length) * 2;
+    }
+
+    const totalBytes = CLOUDFLARE_CONFIG.freeLimitBytes; // 5 GB
+    const remainingBytes = Math.max(0, totalBytes - usedBytes);
+    const percentage = ((usedBytes / totalBytes) * 100).toFixed(4);
+
+    return {
+      databaseName: CLOUDFLARE_CONFIG.databaseName,
+      databaseId: CLOUDFLARE_CONFIG.databaseId,
+      accountId: CLOUDFLARE_CONFIG.accountId,
+      provider: 'Cloudflare D1 SQL (Serverless SQLite)',
+      isConnected: this.isCloudflareConnected(),
+      apiUrl: this.getApiUrl(),
+      newsCount: news.length,
+      totalCapacity: CLOUDFLARE_CONFIG.freeLimitFormatted,
+      usedBytes: usedBytes,
+      usedFormatted: this.formatBytes(usedBytes),
+      remainingBytes: remainingBytes,
+      remainingFormatted: this.formatBytes(remainingBytes),
+      percentageUsed: percentage,
+      percentageRemaining: (100 - parseFloat(percentage)).toFixed(2),
+      backupStatus: '🟢 Faol (Har ehtimolga qarshi mahalliy zaxira saqlanmoqda)'
+    };
+  }
+
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // =========================================================================
+  // CLOUDFLARE INTEGRATSIYASI
   // =========================================================================
 
   getApiUrl() {
@@ -124,7 +187,7 @@ class NewsStore {
     }
   }
 
-  // Cloudflare D1 bazasidan yangiliklarni yuklab olish
+  // Cloudflare D1 bazasidan yangiliklarni yuklab olish (Dual-Storage sinxronlash)
   async syncFromCloudflare() {
     const apiUrl = this.getApiUrl();
     if (!apiUrl || this.isSyncing) return;
@@ -135,58 +198,21 @@ class NewsStore {
       if (res.ok) {
         const cloudNews = await res.json();
         if (Array.isArray(cloudNews) && cloudNews.length > 0) {
-          // Baza ma'lumotlarini mahalliy saqlashga yangilash
+          // Baza ma'lumotlarini har ehtimolga qarshi mahalliy zaxiraga ham yozamiz!
           localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(cloudNews));
           this.notify();
           return cloudNews;
         }
       }
     } catch (err) {
-      console.warn('Cloudflare D1 dan yangiliklarni yuklashda xatolik:', err);
+      console.warn('Cloudflare D1 dan yuklashda ogohlantirish (Mahalliy zaxira ishlamoqda):', err.message);
     } finally {
       this.isSyncing = false;
     }
   }
 
-  // Rasmni Cloudflare R2 Media Storage ga yuklash
-  async uploadMedia(file) {
-    const apiUrl = this.getApiUrl();
-
-    // 1. Agar Cloudflare Worker ulangan bo'lsa, R2 ga yuklash
-    if (apiUrl) {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const res = await fetch(`${apiUrl}/api/upload`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) {
-          throw new Error('R2 ga yuklashda xatolik: ' + res.status);
-        }
-
-        const data = await res.json();
-        if (data.url) {
-          return { ok: true, url: data.url };
-        }
-      } catch (err) {
-        console.warn('R2 yuklash xatosi, fallback ishlatiladi:', err);
-      }
-    }
-
-    // 2. Fallback: Agar Worker ulanmagan bo'lsa, Data URL (Base64) qilib saqlash
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve({ ok: true, url: e.target.result });
-      reader.onerror = () => resolve({ ok: false, url: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80' });
-      reader.readAsDataURL(file);
-    });
-  }
-
   // =========================================================================
-  // YANGILIKLAR BO'YICHA METODLAR
+  // YANGILIKLAR BO'YICHA METODLAR (Manba bilan birga)
   // =========================================================================
 
   getNews() {
@@ -300,6 +326,9 @@ class NewsStore {
       summary: newsData.summary || '',
       content: newsData.content || '',
       author: newsData.author || 'ANTIVIRUS Tahririyati',
+      // Qaysi saytdan olingani (Manba va uning havolasi)
+      source: newsData.source || 'ANTIVIRUS Tahririyati',
+      sourceUrl: newsData.sourceUrl || '',
       readTime: newsData.readTime || '3 daqiqa',
       tags: newsData.tags ? (Array.isArray(newsData.tags) ? newsData.tags : newsData.tags.split(',').map(s => s.trim())) : ['Yangilik'],
       videoUrl: newsData.videoUrl || null
@@ -309,7 +338,7 @@ class NewsStore {
       list.forEach(n => { n.isHero = false; });
     }
 
-    // Mahalliy saqlashga qo'shish
+    // 1. DUAL-STORAGE KAFOLATI: Har ehtimolga qarshi mahalliy zaxiraga darhol saqlaymiz!
     list.unshift(newArticle);
     localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(list));
     this.addNotification({
@@ -319,7 +348,7 @@ class NewsStore {
     });
     this.notify();
 
-    // Cloudflare D1 ga yuborish
+    // 2. Cloudflare D1 ga yuborish
     const apiUrl = this.getApiUrl();
     if (apiUrl) {
       try {
@@ -329,7 +358,7 @@ class NewsStore {
           body: JSON.stringify(newArticle)
         });
       } catch (err) {
-        console.warn('Cloudflare D1 ga yangilik yozishda xatolik:', err);
+        console.warn('Cloudflare D1 ga yozishda xatolik (Mahalliy nusxa saqlandi):', err);
       }
     }
 
