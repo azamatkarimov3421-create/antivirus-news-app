@@ -3,6 +3,43 @@
 import { store } from './store.js';
 import { Icons, getCategoryIcon } from './icons.js';
 
+// Video URL (YouTube, MP4, Telegram) ni avtomatik tahlil qiluvchi
+export function parseVideoEmbed(url) {
+  if (!url) return null;
+  const trimmed = url.trim();
+
+  // 1. YouTube Watch / Short / Embed / youtu.be
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
+  const ytMatch = trimmed.match(ytRegex);
+  if (ytMatch && ytMatch[1]) {
+    const id = ytMatch[1];
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`,
+      thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+      originalUrl: trimmed
+    };
+  }
+
+  // 2. Direct MP4 / WebM video fayl
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(trimmed)) {
+    return {
+      type: 'video',
+      embedUrl: trimmed,
+      thumbnailUrl: null,
+      originalUrl: trimmed
+    };
+  }
+
+  // 3. Iframe embed yoki standart
+  return {
+    type: 'generic',
+    embedUrl: trimmed,
+    thumbnailUrl: null,
+    originalUrl: trimmed
+  };
+}
+
 class AntivirusApp {
   constructor() {
     this.currentTab = 'home'; // 'home' | 'trend' | 'video' | 'menu'
@@ -455,33 +492,76 @@ class AntivirusApp {
   // TAB 4: VIDEO YANGILIKLAR EKRANI
   // -------------------------------------------------------------
   renderVideoView() {
-    const list = store.getNews();
+    const allNews = store.getNews();
+    let videoList = allNews.filter(n => n.category === 'video' || n.videoUrl);
+
+    if (videoList.length === 0) {
+      videoList = allNews.slice(0, 5);
+    }
 
     return `
       <div class="section-headline-bar">
         <h2 class="headline-text" style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: var(--an-red);">${Icons.playCircle}</span> Video yangiliklar
+          <span style="color: var(--an-red);">${Icons.playCircle}</span> Video yangiliklar & Reportajlar
         </h2>
-        <span style="font-size: 11px; color: var(--text-dim);">Eksklyuziv</span>
+        <span style="font-size: 11px; color: var(--text-dim);">${videoList.length} ta video</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 16px;">
-        ${list.slice(0, 4).map(v => `
-          <div class="hero-card-banner" style="height: 200px;" data-open-id="${v.id}">
+        ${videoList.map(v => `
+          <div class="hero-card-banner" style="height: 220px; cursor: pointer;" data-open-id="${v.id}">
             <img class="hero-card-img" src="${v.imageUrl}" alt="${v.title}" />
             <div class="hero-card-gradient"></div>
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; border-radius: 50%; background: var(--an-red); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px var(--an-red-glow);">
-              ${Icons.playCircle}
+            
+            <div style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 54px; height: 54px; border-radius: 50%; background: var(--an-red); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px var(--an-red-glow), 0 4px 14px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.4); font-size: 20px;">
+              ▶
             </div>
+
             <div class="hero-card-info">
-              <span class="hero-tag-badge">VIDEO</span>
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
+                <span class="hero-tag-badge" style="background: var(--an-red); color: #fff;">🎬 VIDEO</span>
+                ${v.source ? `<span class="source-badge" style="background: rgba(0,0,0,0.6); color: #fff; border-color: rgba(255,255,255,0.2); font-size: 10px;">${v.source}</span>` : ''}
+                <span style="font-size: 11px; color: #fff; margin-left: auto; background: rgba(0,0,0,0.6); padding: 2px 7px; border-radius: 4px;">${v.readTime || 'Video'}</span>
+              </div>
               <h3 class="hero-card-title">${v.title}</h3>
               <div class="hero-card-meta">
-                <span>${Icons.clock} ${v.time} • ${v.views.toLocaleString()} ko‘rildi</span>
+                <span>${Icons.clock} ${v.time} • ${v.date}</span>
+                <span>${Icons.eye} ${(v.views || 0).toLocaleString()} ko‘rildi</span>
               </div>
             </div>
           </div>
         `).join('')}
+      </div>
+    `;
+  }
+
+  // Maqola/Video media renderi (Video bo'lsa darhol o'ynaydi)
+  renderArticleMedia(article) {
+    if (article.videoUrl) {
+      const parsed = parseVideoEmbed(article.videoUrl);
+      if (parsed.type === 'youtube' || parsed.type === 'generic') {
+        return `
+          <div style="width: 100%; aspect-ratio: 16/9; background: #000; position: relative;">
+            <iframe
+              src="${parsed.embedUrl}"
+              style="width: 100%; height: 100%; border: none;"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+          </div>
+        `;
+      } else if (parsed.type === 'video') {
+        return `
+          <div style="width: 100%; aspect-ratio: 16/9; background: #000;">
+            <video src="${parsed.embedUrl}" poster="${article.imageUrl}" controls autoplay style="width: 100%; height: 100%; object-fit: contain;"></video>
+          </div>
+        `;
+      }
+    }
+
+    return `
+      <div class="article-media-cover">
+        <img src="${article.imageUrl}" alt="${article.title}" />
       </div>
     `;
   }
@@ -502,9 +582,7 @@ class AntivirusApp {
         <div class="article-reader-modal">
           <button class="close-modal-round" id="closeReaderBtn">${Icons.close}</button>
 
-          <div class="article-media-cover">
-            <img src="${article.imageUrl}" alt="${article.title}" />
-          </div>
+          ${this.renderArticleMedia(article)}
 
           <div class="article-text-body">
             <div class="article-badges-row">
@@ -588,16 +666,19 @@ class AntivirusApp {
             <button class="icon-btn" id="closeCfModalBtn">${Icons.close}</button>
           </div>
 
-          <!-- Modal Nav Tabs -->
+          <!-- Modal Nav Tabs (Rasmli va Video alohida!) -->
           <div class="admin-nav-tabs">
             <button class="admin-tab-btn ${this.cfActiveTab === 'stats' ? 'active' : ''}" data-cf-tab="stats">
-              📊 Baza & Xotira (5 GB)
+              📊 Baza & Xotira
             </button>
-            <button class="admin-tab-btn ${this.cfActiveTab === 'add-news' ? 'active' : ''}" data-cf-tab="add-news">
-              ✍️ Yangilik Qo‘shish
+            <button class="admin-tab-btn ${this.cfActiveTab === 'news' ? 'active' : ''}" data-cf-tab="news">
+              📸 Rasmli Xabar
+            </button>
+            <button class="admin-tab-btn ${this.cfActiveTab === 'video' ? 'active' : ''}" data-cf-tab="video">
+              🎬 Video Xabar
             </button>
             <button class="admin-tab-btn ${this.cfActiveTab === 'list' ? 'active' : ''}" data-cf-tab="list">
-              📋 Maqolalar (${newsList.length})
+              📋 Barchasi (${newsList.length})
             </button>
           </div>
 
@@ -686,9 +767,13 @@ class AntivirusApp {
             </div>
           ` : ''}
 
-          <!-- TAB 2: YANGILIK QO'SHISH (MANBASI BILAN) -->
-          ${this.cfActiveTab === 'add-news' ? `
+          <!-- TAB 2: ALOHIDA RASMLI XABAR QO'SHISH -->
+          ${this.cfActiveTab === 'news' ? `
             <div class="admin-modal-body">
+              <div style="background: rgba(229, 9, 20, 0.08); border-left: 3px solid var(--an-red); padding: 8px 12px; border-radius: 8px; font-size: 11.5px; color: var(--text-main); margin-bottom: 4px;">
+                📸 <b>Rasmli yangilik joylash:</b> Matnli va rasmli xabarlarni manbasi bilan tezkor joylang.
+              </div>
+
               <div class="form-group">
                 <label class="form-label">Yangilik Sarlavhasi</label>
                 <input type="text" id="cfNewsTitle" class="form-input" placeholder="Tezkor xabar sarlavhasi..." />
@@ -698,7 +783,7 @@ class AntivirusApp {
                 <div class="form-group">
                   <label class="form-label">Bo‘lim (Kategoriya)</label>
                   <select id="cfNewsCategory" class="form-select">
-                    ${categories.map(c => `
+                    ${categories.filter(c => c.id !== 'all' && c.id !== 'video').map(c => `
                       <option value="${c.id}">${c.name}</option>
                     `).join('')}
                   </select>
@@ -735,7 +820,7 @@ class AntivirusApp {
 
               <div class="form-group">
                 <label class="form-label">To‘liq Maqola Matni</label>
-                <textarea id="cfNewsContent" class="form-textarea" style="min-height: 110px;" placeholder="Batafsil xabar matni..."></textarea>
+                <textarea id="cfNewsContent" class="form-textarea" style="min-height: 100px;" placeholder="Batafsil maqola matni..."></textarea>
               </div>
 
               <div class="form-row">
@@ -751,17 +836,77 @@ class AntivirusApp {
               </div>
 
               <button class="btn-primary-red" id="cfSubmitNewsBtn">
-                <span>🚀 Bazaga Saqlash (Dual-Storage)</span>
+                <span>📸 Rasmli Xabarni Saqlash</span>
               </button>
             </div>
           ` : ''}
 
-          <!-- TAB 3: BAZADAGI MAQOLALAR VA MANBALAR RO'YXATI -->
+          <!-- TAB 3: ALOHIDA VIDEO XABAR QO'SHISH -->
+          ${this.cfActiveTab === 'video' ? `
+            <div class="admin-modal-body">
+              <div style="background: rgba(37, 99, 235, 0.08); border-left: 3px solid #2563EB; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; color: var(--text-main); margin-bottom: 4px;">
+                🎬 <b>Video xabar joylash:</b> YouTube, Telegram yoki to‘g‘ridan-to‘g‘ri video havolasini qo‘yishingiz mumkin.
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Video Sarlavhasi</label>
+                <input type="text" id="cfVideoTitle" class="form-input" placeholder="Video reportaj sarlavhasi..." />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Video Havolasi (YouTube / Telegram / MP4)</label>
+                <input type="url" id="cfVideoUrl" class="form-input" placeholder="https://www.youtube.com/watch?v=... yoki https://youtu.be/..." />
+                <span style="font-size: 10.5px; color: var(--text-dim);">
+                  YouTube havolasi qo‘yilsa, muqova va video avtomatik tayyorlanadi!
+                </span>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Qaysi kanaldan/saytdan (Manba)</label>
+                  <input type="text" id="cfVideoSource" class="form-input" placeholder="YouTube, Telegram, Kun.uz TV..." value="YouTube" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Video Davomiyligi</label>
+                  <input type="text" id="cfVideoDuration" class="form-input" placeholder="Masalan: 04:15, 12:30" value="03:45" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Muqova Rasmi (Cover) — Ixtiyoriy</label>
+                <input type="url" id="cfVideoImageUrl" class="form-input" placeholder="Bo‘sh qoldirilsa, YouTube'dan avtomatik olinadi" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Qisqacha Tavsif / Mazmuni</label>
+                <textarea id="cfVideoSummary" class="form-textarea" placeholder="Videoning qisqacha mazmuni..."></textarea>
+              </div>
+
+              <div class="form-row">
+                <label class="form-checkbox-label">
+                  <input type="checkbox" id="cfVideoIsHero" />
+                  <span>Katta Hero Videoga chiqarish</span>
+                </label>
+
+                <label class="form-checkbox-label">
+                  <input type="checkbox" id="cfVideoIsTrending" checked />
+                  <span>Trenddagi video</span>
+                </label>
+              </div>
+
+              <button class="btn-primary-red" id="cfSubmitVideoBtn" style="background: linear-gradient(135deg, #E50914 0%, #A3020B 100%);">
+                <span>🎬 Videoni Bazaga Saqlash</span>
+              </button>
+            </div>
+          ` : ''}
+
+          <!-- TAB 4: BAZADAGI MAQOLALAR VA VIDEOLAR RO'YXATI -->
           ${this.cfActiveTab === 'list' ? `
             <div class="admin-modal-body">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <span class="form-label">Bazadagi barcha maqolalar (${newsList.length})</span>
-                <span style="font-size: 11px; color: var(--text-dim);">Manbasi va ko‘rishlar</span>
+                <span class="form-label">Bazadagi barcha xabarlar (${newsList.length})</span>
+                <span style="font-size: 11px; color: var(--text-dim);">Manbasi va turi</span>
               </div>
 
               <div class="admin-news-table-wrap">
@@ -770,6 +915,11 @@ class AntivirusApp {
                     <div class="admin-news-row-info">
                       <div class="admin-news-row-title">${n.title}</div>
                       <div class="admin-news-row-meta">
+                        ${n.category === 'video' || n.videoUrl ? `
+                          <span class="source-badge" style="background: rgba(229, 9, 20, 0.15); color: var(--an-red);">🎬 Video</span>
+                        ` : `
+                          <span class="source-badge" style="background: rgba(37, 99, 235, 0.15); color: #2563EB;">📸 Rasmli</span>
+                        `}
                         <span class="source-badge">${n.source || 'ANTIVIRUS'}</span>
                         <span>${Icons.clock} ${n.time} • ${n.views || 0} ko‘rildi</span>
                       </div>
@@ -904,7 +1054,56 @@ class AntivirusApp {
       this.openArticle(created.id);
     });
 
-    // 9b. Maqolani o'chirish
+    // 9b. Alohida Video Xabar Qo'shish
+    document.getElementById('cfSubmitVideoBtn')?.addEventListener('click', async () => {
+      const title = document.getElementById('cfVideoTitle')?.value.trim();
+      const videoUrl = document.getElementById('cfVideoUrl')?.value.trim();
+      const source = document.getElementById('cfVideoSource')?.value.trim() || 'YouTube';
+      const duration = document.getElementById('cfVideoDuration')?.value.trim() || '03:45';
+      let imageUrl = document.getElementById('cfVideoImageUrl')?.value.trim();
+      const summary = document.getElementById('cfVideoSummary')?.value.trim();
+      const isHero = Boolean(document.getElementById('cfVideoIsHero')?.checked);
+      const isTrending = Boolean(document.getElementById('cfVideoIsTrending')?.checked);
+
+      if (!title || !videoUrl) {
+        alert('Iltimos, video sarlavhasi va video havolasini kiriting!');
+        return;
+      }
+
+      this.showToast('⏳ Video bazaga saqlanmoqda...');
+
+      const parsed = parseVideoEmbed(videoUrl);
+      if (!imageUrl && parsed && parsed.thumbnailUrl) {
+        imageUrl = parsed.thumbnailUrl;
+      }
+      if (!imageUrl) {
+        imageUrl = 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80';
+      }
+
+      const created = await store.createNews({
+        title,
+        category: 'video',
+        categoryName: 'Video',
+        videoUrl: (parsed && parsed.embedUrl) || videoUrl,
+        imageUrl,
+        author: 'ANTIVIRUS Media',
+        source,
+        sourceUrl: videoUrl,
+        readTime: duration,
+        summary: summary || title,
+        content: summary || title,
+        isHero,
+        isTrending,
+        tags: ['Video', source]
+      });
+
+      this.showToast('🎬 Video muvaffaqiyatli saqlandi!');
+      this.closeCfModal();
+      this.setTab('video');
+      this.openArticle(created.id);
+    });
+
+    // 9c. Maqolani o'chirish
     document.querySelectorAll('[data-del-news-id]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.getAttribute('data-del-news-id');
@@ -941,7 +1140,7 @@ class AntivirusApp {
 
       if (this.anClickCount >= 3) {
         this.anClickCount = 0;
-        this.openCfModal('connect');
+        this.openCfModal('stats');
         return;
       }
 
