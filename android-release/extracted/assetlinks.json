@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.antivirusnews.app",
+        "sha256_cert_fingerprints": ["B5:AB:F6:D0:BC:9F:18:BB:A5:C5:0A:DB:79:AD:39:05:5D:F1:E2:BE:56:3E:89:BD:3A:A9:66:A2:FB:2D:F4:4B"]
+      }
+    }]
