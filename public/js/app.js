@@ -92,6 +92,7 @@ class AntivirusApp {
     this.isSearchOpen = false;
     this.isNotifOpen = false;
     this.heroSlideIndex = 0;
+    this.heroAutoPlayTimer = null;
     this.activeArticleId = null;
     this.isCfModalOpen = false;
     this.cfActiveTab = 'stats'; // 'stats' | 'add-news' | 'video' | 'list'
@@ -159,8 +160,13 @@ class AntivirusApp {
   }
 
   setCategory(catId) {
+    if (catId === 'trend') {
+      this.selectedCategory = 'trend';
+      this.setTab('trend');
+      return;
+    }
     this.selectedCategory = catId;
-    if (this.currentTab === 'menu') {
+    if (this.currentTab === 'menu' || this.currentTab === 'trend') {
       this.currentTab = 'home';
     }
     this.render();
@@ -168,12 +174,133 @@ class AntivirusApp {
 
   setTab(tab) {
     this.currentTab = tab;
+    if (tab === 'trend') {
+      this.selectedCategory = 'trend';
+    } else if (tab === 'home' && this.selectedCategory === 'trend') {
+      this.selectedCategory = 'all';
+    }
     this.activeArticleId = null;
     this.activePhotoRatio = null;
+    if (tab !== 'home') {
+      this.stopHeroAutoPlay();
+    }
     this.render();
   }
 
+  startHeroAutoPlay() {
+    this.stopHeroAutoPlay();
+    if (this.currentTab !== 'home' || this.activeArticleId || this.isCfModalOpen) {
+      return;
+    }
+    this.heroAutoPlayTimer = setInterval(() => {
+      this.nextHeroSlide();
+    }, 4500);
+  }
+
+  stopHeroAutoPlay() {
+    if (this.heroAutoPlayTimer) {
+      clearInterval(this.heroAutoPlayTimer);
+      this.heroAutoPlayTimer = null;
+    }
+  }
+
+  getHeroSliderItems() {
+    const newsList = store.getNews();
+    let list = newsList;
+    if (this.selectedCategory !== 'all') {
+      if (this.selectedCategory === 'trend') {
+        list = store.getTrendingNews();
+      } else {
+        list = list.filter(n => n.category === this.selectedCategory);
+      }
+    }
+    if (this.searchQuery) {
+      list = list.filter(n =>
+        n.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        (n.summary && n.summary.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+        (n.content && n.content.toLowerCase().includes(this.searchQuery.toLowerCase()))
+      );
+    }
+    return list.slice(0, 5);
+  }
+
+  nextHeroSlide() {
+    const sliderItems = this.getHeroSliderItems();
+    if (sliderItems.length <= 1) return;
+    const nextIndex = (this.heroSlideIndex + 1) % sliderItems.length;
+    this.setHeroSlide(nextIndex);
+  }
+
+  prevHeroSlide() {
+    const sliderItems = this.getHeroSliderItems();
+    if (sliderItems.length <= 1) return;
+    const prevIndex = (this.heroSlideIndex - 1 + sliderItems.length) % sliderItems.length;
+    this.setHeroSlide(prevIndex);
+  }
+
+  setHeroSlide(index) {
+    this.heroSlideIndex = index;
+    const sliderItems = this.getHeroSliderItems();
+    if (sliderItems.length === 0) return;
+
+    const banner = document.getElementById('heroBannerCarousel');
+    const activeItem = sliderItems[this.heroSlideIndex % sliderItems.length];
+
+    if (banner && activeItem) {
+      banner.setAttribute('data-open-id', activeItem.id);
+      banner.setAttribute('title', activeItem.title);
+      const img = document.getElementById('heroCardImg');
+      if (img) {
+        img.style.opacity = '0.35';
+        setTimeout(() => {
+          img.src = activeItem.imageUrl;
+          img.alt = activeItem.title;
+          img.style.opacity = '1';
+        }, 120);
+      }
+      const info = document.getElementById('heroCardInfo');
+      if (info) {
+        info.innerHTML = `
+          <div class="hero-badge-row">
+            <span class="hero-tag-badge">${activeItem.categoryName || 'ASOSIY'}</span>
+            <span class="hero-recent-badge">Yangi</span>
+          </div>
+          <h3 class="hero-card-title">${activeItem.title}</h3>
+          ${activeItem.summary ? `<p class="hero-card-desc">${activeItem.summary}</p>` : ''}
+          <div class="hero-card-meta">
+            <div class="hero-meta-left">
+              <span>${Icons.clock} ${activeItem.time}</span>
+              <span>${Icons.calendar} ${activeItem.date}</span>
+              <span>${Icons.eye} ${(activeItem.views || 0).toLocaleString()}</span>
+            </div>
+            ${sliderItems.length > 1 ? `
+              <div class="hero-dots-row" onclick="event.stopPropagation();">
+                ${sliderItems.map((s, idx) => `
+                  <button class="hero-dot-btn ${idx === (this.heroSlideIndex % sliderItems.length) ? 'active' : ''}" data-slide-index="${idx}" title="${s.title}"></button>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+
+        info.querySelectorAll('[data-slide-index]').forEach(dot => {
+          dot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(e.currentTarget.getAttribute('data-slide-index'), 10);
+            if (!isNaN(idx)) {
+              this.setHeroSlide(idx);
+              this.startHeroAutoPlay();
+            }
+          });
+        });
+      }
+    } else {
+      this.render();
+    }
+  }
+
   openArticle(id) {
+    this.stopHeroAutoPlay();
     this.activeArticleId = id;
     const article = store.getNewsById(id);
     this.activePhotoRatio = article?.aspectRatio || '16:9';
@@ -199,6 +326,9 @@ class AntivirusApp {
     if (this.speechSynth) this.speechSynth.cancel();
     this.isAudioPlaying = false;
     this.render();
+    if (this.currentTab === 'home') {
+      this.startHeroAutoPlay();
+    }
   }
 
   setArticleModalSize(size) {
@@ -237,6 +367,7 @@ class AntivirusApp {
   }
 
   openCfModal(tab = 'stats') {
+    this.stopHeroAutoPlay();
     this.isCfModalOpen = true;
     this.cfActiveTab = tab;
     this.render();
@@ -245,6 +376,9 @@ class AntivirusApp {
   closeCfModal() {
     this.isCfModalOpen = false;
     this.render();
+    if (this.currentTab === 'home') {
+      this.startHeroAutoPlay();
+    }
   }
 
   toggleAudio(text) {
@@ -353,12 +487,6 @@ class AntivirusApp {
             </nav>
 
             <div class="header-controls">
-              <!-- Kompyuter foydalanuvchisi uchun to'g'ridan-to'g'ri APK yuklab olish tugmasi -->
-              <a href="/download/antivirus-news.apk" class="desktop-apk-pill" download title="Android ilovani yuklab olish">
-                <span class="apk-pill-icon">📱</span>
-                <span class="apk-pill-text">Ilova (.APK)</span>
-              </a>
-
               <button class="icon-btn" id="themeSwitchBtn" title="Rejimni almashtirish">
                 ${theme === 'dark' ? Icons.sun : Icons.moon}
               </button>
@@ -466,6 +594,12 @@ class AntivirusApp {
     `;
 
     this.bindEvents();
+
+    if (this.currentTab === 'home' && !this.activeArticleId && !this.isCfModalOpen) {
+      this.startHeroAutoPlay();
+    } else {
+      this.stopHeroAutoPlay();
+    }
   }
 
   // Gorizontal toifalar tasmasi
@@ -473,11 +607,11 @@ class AntivirusApp {
     return `
       <div class="category-tabs-container">
         <nav class="category-tabs-bar">
-          <div class="cat-tab-item ${this.selectedCategory === 'all' ? 'active' : ''}" data-cat-select="all">
+          <div class="cat-tab-item ${this.selectedCategory === 'all' && this.currentTab !== 'trend' ? 'active' : ''}" data-cat-select="all">
             Barchasi
           </div>
-          ${categories.slice(0, 8).map(c => `
-            <div class="cat-tab-item ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-select="${c.id}">
+          ${categories.filter(c => c.id !== 'all').map(c => `
+            <div class="cat-tab-item ${(this.selectedCategory === c.id || (c.id === 'trend' && this.currentTab === 'trend')) ? 'active' : ''}" data-cat-select="${c.id}">
               ${c.name}
             </div>
           `).join('')}
@@ -509,7 +643,11 @@ class AntivirusApp {
 
     let list = newsList;
     if (this.selectedCategory !== 'all') {
-      list = list.filter(n => n.category === this.selectedCategory);
+      if (this.selectedCategory === 'trend') {
+        list = store.getTrendingNews();
+      } else {
+        list = list.filter(n => n.category === this.selectedCategory);
+      }
     }
     if (this.searchQuery) {
       list = list.filter(n =>
@@ -519,12 +657,13 @@ class AntivirusApp {
       );
     }
 
-    const featuredList = list.filter(n => n.isSlider || n.isHero);
-    const sliderItems = featuredList.length > 0 ? featuredList : list.slice(0, 4);
+    // Tepada eng oxirgi qo'yilgan yangiliklar slayderi (eng so'nggi 5 ta xabar)
+    const sliderItems = list.slice(0, 5);
     const currentHeroIndex = sliderItems.length > 0 ? (this.heroSlideIndex % sliderItems.length) : 0;
     const heroNews = sliderItems[currentHeroIndex] || list[0];
-    const streamNews = list.filter(n => n.id !== heroNews?.id);
-    const topReadNews = [...newsList].sort((a, b) => b.views - a.views).slice(0, 5);
+    // Pastida barcha yangiliklar ketma-ket joylashishi (xronologik tartibda)
+    const streamNews = list;
+    const topReadNews = store.getTrendingNews().slice(0, 5);
     const breakingNews = newsList.find(n => n.isTrending) || newsList[0];
 
     return `
@@ -556,14 +695,30 @@ class AntivirusApp {
             </div>
           ` : ''}
 
-          <!-- 3. Katta Hero Slayder Kartasi -->
+          <!-- 3. Katta Hero Slayder Kartasi (Eng oxirgi qo'yilganlar aylanib turishi) -->
           ${heroNews ? `
-            <div class="hero-card-banner" data-open-id="${heroNews.id}">
-              <img class="hero-card-img" src="${heroNews.imageUrl}" alt="${heroNews.title}" />
+            <div class="hero-card-banner hero-carousel-wrapper" id="heroBannerCarousel" data-open-id="${heroNews.id}" title="${heroNews.title}">
+              <img class="hero-card-img" id="heroCardImg" src="${heroNews.imageUrl}" alt="${heroNews.title}" />
               <div class="hero-card-gradient"></div>
-              <div class="hero-card-info">
-                <span class="hero-tag-badge">${heroNews.categoryName || 'ASOSIY'}</span>
+
+              ${sliderItems.length > 1 ? `
+                <button class="hero-nav-arrow hero-nav-prev" id="heroPrevBtn" aria-label="Oldingi xabar" title="Oldingi xabar">
+                  ${Icons.chevronLeft}
+                </button>
+                <button class="hero-nav-arrow hero-nav-next" id="heroNextBtn" aria-label="Keyingi xabar" title="Keyingi xabar">
+                  ${Icons.chevronRight}
+                </button>
+              ` : ''}
+
+              <div class="hero-card-info" id="heroCardInfo">
+                <div class="hero-badge-row">
+                  <span class="hero-tag-badge">${heroNews.categoryName || 'ASOSIY'}</span>
+                  <span class="hero-recent-badge">Yangi</span>
+                </div>
                 <h3 class="hero-card-title">${heroNews.title}</h3>
+                ${heroNews.summary ? `
+                  <p class="hero-card-desc">${heroNews.summary}</p>
+                ` : ''}
                 <div class="hero-card-meta">
                   <div class="hero-meta-left">
                     <span>${Icons.clock} ${heroNews.time}</span>
@@ -630,22 +785,10 @@ class AntivirusApp {
                   <span class="sidebar-num-badge num-${i + 1}">${i + 1}</span>
                   <div class="sidebar-news-info">
                     <h5 class="sidebar-news-title">${n.title}</h5>
-                    <span class="sidebar-news-meta">${Icons.eye} ${n.views.toLocaleString()} • ${n.time}</span>
+                    <span class="sidebar-news-meta">${Icons.eye} ${(n.views || 0).toLocaleString()} • ${n.time}</span>
                   </div>
                 </div>
               `).join('')}
-            </div>
-          </div>
-
-          <!-- Widget 2: Android Ilova Banneri -->
-          <div class="sidebar-widget app-download-banner">
-            <div class="app-banner-icon">AN</div>
-            <div class="app-banner-content">
-              <h4 class="app-banner-title">ANTIVIRUS NEWS Ilovasi</h4>
-              <p class="app-banner-subtitle">Android telefoningiz uchun tezkor, engil va xolis yangiliklar ilovasi.</p>
-              <a href="/download/antivirus-news.apk" class="app-banner-download-btn" download>
-                📥 APK Yuklab Olish (1.2 MB)
-              </a>
             </div>
           </div>
 
@@ -710,7 +853,7 @@ class AntivirusApp {
           <button class="icon-btn" id="menuSearchBtn" title="Qidiruv">${Icons.search}</button>
         </div>
 
-        <!-- Tezkor amallar kartalari (Saqlanganlar va APK) -->
+        <!-- Tezkor amallar kartalari (Saqlanganlar) -->
         <div class="menu-quick-action-cards">
           <div class="menu-action-card" data-tab-link="saved">
             <div class="menu-action-icon" style="color: #F59E0B; background: rgba(245, 158, 11, 0.12);">
@@ -722,17 +865,6 @@ class AntivirusApp {
             </div>
             <span class="cat-row-chevron">${Icons.chevronRight}</span>
           </div>
-
-          <a href="/download/antivirus-news.apk" class="menu-action-card" download>
-            <div class="menu-action-icon" style="color: var(--an-red); background: rgba(229, 9, 20, 0.12);">
-              📱
-            </div>
-            <div class="menu-action-info">
-              <span class="menu-action-title">Android Ilova (.APK)</span>
-              <span class="menu-action-sub">Tezkor o‘rnatish (1.2 MB)</span>
-            </div>
-            <span class="cat-row-chevron">${Icons.chevronRight}</span>
-          </a>
         </div>
 
         <!-- 11 ta Bo'limlar Ro'yxati -->
@@ -838,7 +970,7 @@ class AntivirusApp {
   // TAB 3: TRENDLAR EKRANI
   // -------------------------------------------------------------
   renderTrendView() {
-    const list = store.getNews().sort((a, b) => b.views - a.views);
+    const list = store.getTrendingNews();
 
     return `
       <div class="section-headline-bar">
@@ -2295,11 +2427,34 @@ class AntivirusApp {
         e.stopPropagation();
         const idx = parseInt(e.currentTarget.getAttribute('data-slide-index'), 10);
         if (!isNaN(idx)) {
-          this.heroSlideIndex = idx;
-          this.render();
+          this.setHeroSlide(idx);
+          this.startHeroAutoPlay();
         }
       });
     });
+
+    // 18b. Hero Slayder oldingi / keyingi tugmalari
+    document.getElementById('heroPrevBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.prevHeroSlide();
+      this.startHeroAutoPlay();
+    });
+    document.getElementById('heroNextBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.nextHeroSlide();
+      this.startHeroAutoPlay();
+    });
+
+    // 18c. Hero Slayder ustiga sichqoncha kelganda avto-aylanishni to'xtatish (hover pause)
+    const heroEl = document.getElementById('heroBannerCarousel');
+    if (heroEl) {
+      heroEl.addEventListener('mouseenter', () => this.stopHeroAutoPlay());
+      heroEl.addEventListener('mouseleave', () => {
+        if (this.currentTab === 'home' && !this.activeArticleId && !this.isCfModalOpen) {
+          this.startHeroAutoPlay();
+        }
+      });
+    }
 
     // 19. Saqlangan xabarlardan tezkor o'chirish
     document.querySelectorAll('[data-remove-saved]').forEach(btn => {

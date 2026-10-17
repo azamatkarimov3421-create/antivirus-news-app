@@ -239,15 +239,72 @@ class NewsStore {
   }
 
   // =========================================================================
-  // YANGILIKLAR BO'YICHA METODLAR (Manba bilan birga)
+  // YANGILIKLAR BO'YICHA METODLAR (Manba va Saralash bilan birga)
   // =========================================================================
 
+  parseTimestamp(item) {
+    if (!item) return 0;
+    if (item.createdAt) {
+      const t = new Date(item.createdAt).getTime();
+      if (!isNaN(t)) return t;
+    }
+    if (item.id && typeof item.id === 'string' && item.id.startsWith('an-')) {
+      const numPart = item.id.replace('an-', '');
+      if (numPart.length >= 10 && !isNaN(Number(numPart))) {
+        return Number(numPart);
+      }
+    }
+    if (item.date && typeof item.date === 'string') {
+      const parts = item.date.split('.');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        let hour = 0;
+        let minute = 0;
+        if (item.time && typeof item.time === 'string') {
+          const tParts = item.time.split(':');
+          hour = parseInt(tParts[0], 10) || 0;
+          minute = parseInt(tParts[1], 10) || 0;
+        }
+        const d = new Date(year, month, day, hour, minute);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+    }
+    return 0;
+  }
+
+  compareNewest(a, b) {
+    const tB = this.parseTimestamp(b);
+    const tA = this.parseTimestamp(a);
+    if (tB !== tA) return tB - tA;
+    if (a.id && b.id && typeof a.id === 'string' && typeof b.id === 'string') {
+      return a.id.localeCompare(b.id);
+    }
+    return 0;
+  }
+
+  // Barcha yangiliklar eng oxirgi qo'yilganlar tartibida (xronologik, eng yangisi oldinda)
   getNews() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.NEWS)) || INITIAL_NEWS;
+      const stored = localStorage.getItem(STORAGE_KEYS.NEWS);
+      const list = stored ? JSON.parse(stored) : INITIAL_NEWS;
+      return [...list].sort((a, b) => this.compareNewest(a, b));
     } catch {
-      return INITIAL_NEWS;
+      return [...INITIAL_NEWS].sort((a, b) => this.compareNewest(a, b));
     }
+  }
+
+  // Trenddagi yangiliklar eng ko'p ko'rilganlar soni bo'yicha (views kamayish tartibida)
+  getTrendingNews() {
+    const list = this.getNews();
+    return [...list].sort((a, b) => (Number(b.views) || 0) - (Number(a.views) || 0));
+  }
+
+  // Eng oxirgi qo'shilgan yangiliklar
+  getLatestNews(limit = null) {
+    const list = this.getNews();
+    return limit ? list.slice(0, limit) : list;
   }
 
   getNewsById(id) {
@@ -342,6 +399,7 @@ class NewsStore {
       id,
       time: timeStr,
       date: dateStr,
+      createdAt: now.toISOString(),
       views: 1,
       isHero: Boolean(newsData.isHero),
       isTrending: Boolean(newsData.isTrending),
