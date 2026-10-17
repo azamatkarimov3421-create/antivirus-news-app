@@ -19,26 +19,30 @@ class NewsStore {
   }
 
   init() {
-    if (!localStorage.getItem(STORAGE_KEYS.NEWS)) {
-      localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(INITIAL_NEWS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.SAVED)) {
-      localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(['an-001']));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.THEME)) {
-      localStorage.setItem(STORAGE_KEYS.THEME, 'dark'); // default dark mode, stylish
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ADS)) {
-      localStorage.setItem(STORAGE_KEYS.ADS, JSON.stringify(INITIAL_ADS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) {
-      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([
-        { id: 1, title: 'Tezkor xabar', text: 'Shavkat Mirziyoyev telefon muloqoti tafsilotlari', time: '5 daqiqa oldin', read: false },
-        { id: 2, title: 'Iqtisodiyot', text: 'Yangi Chery Tiggo 4 Pro O‘zbekiston bozoriga kirdi', time: '1 soat oldin', read: false }
-      ]));
+    try {
+      if (!localStorage.getItem(STORAGE_KEYS.NEWS)) {
+        localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(INITIAL_NEWS));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
+        localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.SAVED)) {
+        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(['an-001']));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.THEME)) {
+        localStorage.setItem(STORAGE_KEYS.THEME, 'dark'); // default dark mode, stylish
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.ADS)) {
+        localStorage.setItem(STORAGE_KEYS.ADS, JSON.stringify(INITIAL_ADS));
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) {
+        localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([
+          { id: 1, title: 'Tezkor xabar', text: 'Shavkat Mirziyoyev telefon muloqoti tafsilotlari', time: '5 daqiqa oldin', read: false },
+          { id: 2, title: 'Iqtisodiyot', text: 'Yangi Chery Tiggo 4 Pro O‘zbekiston bozoriga kirdi', time: '1 soat oldin', read: false }
+        ]));
+      }
+    } catch (e) {
+      console.warn('LocalStorage unavailable, using memory fallback', e);
     }
   }
 

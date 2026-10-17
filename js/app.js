@@ -879,7 +879,11 @@ class AntivirusPlatform {
   }
 }
 
-// Ishga tushirish
-document.addEventListener('DOMContentLoaded', () => {
+// Ishga tushirish (xavfsiz va darhol)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    window.antivirusPlatform = new AntivirusPlatform();
+  });
+} else {
   window.antivirusPlatform = new AntivirusPlatform();
-});
+}
