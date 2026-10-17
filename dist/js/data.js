@@ -38,6 +38,7 @@ Ayniqsa, savdo-iqtisodiy, energetika, transport-logistika va qishloq xo‘jaligi
     author: 'ANTIVIRUS Tahririyati',
     readTime: '3 daqiqa',
     tags: ['O‘zbekiston', 'Turkmaniston', 'Prezident', 'Siyosat', 'Muloqot'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -61,6 +62,7 @@ Narxlar va mavjud komplektatsiyalar rasmiy dilerlik markazlarida e’lon qilindi
     author: 'Avto Sharh',
     readTime: '2 daqiqa',
     tags: ['Chery', 'Avtomobil', 'Bozor', 'Biznes'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -84,6 +86,7 @@ Loyiha natijasida yiliga 500 dan ortiq yosh mutaxassislar qayta tayyorlanadi va 
     author: 'Tibbiyot bo‘limi',
     readTime: '3 daqiqa',
     tags: ['Samarqand', 'Tibbiyot', 'Innovatsiya', 'Ta’lim'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -111,6 +114,7 @@ Smartfon yoshlar va faol foydalanuvchilar uchun ideal tanlov sifatida baholanmoq
     author: 'Tech Review',
     readTime: '4 daqiqa',
     tags: ['HONOR', 'Smartfon', 'Gadjet', 'Texnologiya'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -132,6 +136,7 @@ Ekspertlar ta’kidlashicha, ushbu pakt Markaziy Osiyo orqali o‘tuvchi xalqaro
     author: 'Siyosiy Tahlil',
     readTime: '5 daqiqa',
     tags: ['Samarqand', 'Sammit', 'Siyosat', 'Mintaqa'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -153,6 +158,7 @@ Hujjat kiberxurujlar, deepfake texnologiyalaridan noqonuniy foydalanish va ma’
     author: 'Xalqaro Byuro',
     readTime: '3 daqiqa',
     tags: ['BMT', 'Dunyo', 'Sun’iy Intellekt', 'Xavfsizlik'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -174,6 +180,7 @@ O‘yinda legionerlarimiz Abbosbek Fayzullayev, Eldor Shomurodov va Oston O‘ru
     author: 'Sport News',
     readTime: '2 daqiqa',
     tags: ['Sport', 'Futbol', 'O‘zbekiston', 'JCh-2026'],
+    aspectRatio: '16:9',
     videoUrl: null
   },
   {
@@ -201,6 +208,7 @@ Video lavhamizda:
     sourceUrl: 'https://youtube.com',
     readTime: 'Videoni ko‘rish (4:15)',
     tags: ['Video', 'Toshkent', 'Aeroport', 'Reportaj'],
+    aspectRatio: '16:9',
     videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
   },
   {
@@ -224,6 +232,7 @@ Ushbu video lavhamizda kiberxavfsizlik bo‘yicha ekspertlar smartfon va kompyut
     sourceUrl: 'https://youtube.com',
     readTime: 'Videoni ko‘rish (5:30)',
     tags: ['Video', 'Kiberxavfsizlik', 'Texnologiya'],
+    aspectRatio: '16:9',
     videoUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk'
   },
   {
@@ -245,6 +254,7 @@ Ushbu video lavhamizda kiberxavfsizlik bo‘yicha ekspertlar smartfon va kompyut
     sourceUrl: 'https://youtube.com',
     readTime: 'Videoni ko‘rish (3:50)',
     tags: ['Video', 'Samarqand', 'Madaniyat'],
+    aspectRatio: '16:9',
     videoUrl: 'https://www.youtube.com/watch?v=fJ9rUzIMcZQ'
   }
 ];

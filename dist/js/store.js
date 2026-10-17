@@ -34,6 +34,7 @@ class NewsStore {
       if (!storedNews) {
         const enriched = INITIAL_NEWS.map(n => ({
           ...n,
+          aspectRatio: n.aspectRatio || '16:9',
           source: n.source || 'ANTIVIRUS Tahririyati',
           sourceUrl: n.sourceUrl || ''
         }));
@@ -42,10 +43,18 @@ class NewsStore {
         try {
           const currentList = JSON.parse(storedNews);
           let updated = false;
+          currentList.forEach(item => {
+            if (!item.aspectRatio) {
+              const initMatch = INITIAL_NEWS.find(n => n.id === item.id);
+              item.aspectRatio = (initMatch && initMatch.aspectRatio) || '16:9';
+              updated = true;
+            }
+          });
           INITIAL_NEWS.forEach(initItem => {
             if (!currentList.some(n => n.id === initItem.id)) {
               currentList.push({
                 ...initItem,
+                aspectRatio: initItem.aspectRatio || '16:9',
                 source: initItem.source || 'ANTIVIRUS Tahririyati',
                 sourceUrl: initItem.sourceUrl || ''
               });

@@ -1355,22 +1355,201 @@ button {
   display: block;
 }
 
-/* Rasmli Xabar Frame */
+/* ==========================================================================
+   Rasmli Xabar Media Frame — Standart 16:9 va O'lchamiga Moslashuvchi Tizim
+   ========================================================================== */
 .article-photo-frame {
+  position: relative;
   width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
   max-height: 520px;
   border-radius: 16px;
   overflow: hidden;
-  margin-bottom: 16px;
-  background: var(--bg-card);
+  margin-bottom: 18px;
+  background: #000000;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  flex-shrink: 0; /* QAT'IY QOIDA: Flexbox o'quvchi oynasi ichida rasmni tor chiziqqa ezib qo'ymaydi */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: aspect-ratio 0.25s ease, max-height 0.25s ease, min-height 0.25s ease;
 }
 
+/* Orqa xira fon (Portret va boshqa formatlar chetini estetik to'ldirish uchun) */
+.article-photo-backdrop {
+  position: absolute;
+  inset: -30px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(34px) brightness(0.38) saturate(1.4);
+  opacity: 0.85;
+  pointer-events: none;
+  transform: scale(1.15);
+  transition: opacity 0.3s ease;
+}
+
+/* Asosiy Rasm */
 .article-clean-photo {
+  position: relative;
+  z-index: 2;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.article-clean-photo:hover {
+  opacity: 0.96;
+}
+
+/* 1. 16:9 Gorizontal (Standart Keng Format) */
+.article-photo-frame.ratio-16-9,
+.article-photo-frame:not([class*="ratio-"]) {
+  aspect-ratio: 16 / 9;
+  max-height: 520px;
+}
+
+.article-photo-frame.ratio-16-9 .article-clean-photo,
+.article-photo-frame:not([class*="ratio-"]) .article-clean-photo {
   width: 100%;
   height: 100%;
-  max-height: 520px;
   object-fit: cover;
-  display: block;
+  object-position: center 25%;
+}
+
+/* 2. 4:3 Klassik Format */
+.article-photo-frame.ratio-4-3 {
+  aspect-ratio: 16 / 9;
+  max-height: 520px;
+}
+
+.article-photo-frame.ratio-4-3 .article-clean-photo {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* 3. 3:4 Portret Format (3 ga 4 — Hujjat va Portret suratlar) */
+.article-photo-frame.ratio-3-4 {
+  aspect-ratio: 16 / 9;
+  min-height: 360px;
+  max-height: 540px;
+}
+
+.article-photo-frame.ratio-3-4 .article-clean-photo {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.65);
+}
+
+/* 4. 1:1 Kvadrat (Instagram Post formati) */
+.article-photo-frame.ratio-1-1 {
+  aspect-ratio: 16 / 9;
+  min-height: 320px;
+  max-height: 520px;
+}
+
+.article-photo-frame.ratio-1-1 .article-clean-photo {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* 5. 9:16 Tik Format (Shorts / Reels / TikTok) */
+.article-photo-frame.ratio-9-16 {
+  aspect-ratio: 16 / 9;
+  min-height: 380px;
+  max-height: 560px;
+}
+
+.article-photo-frame.ratio-9-16 .article-clean-photo {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.65);
+}
+
+/* 6. Asl O'lcham (Auto / Fit — Suratning asl proporsiyasi, hech qayeri kesilmaydi) */
+.article-photo-frame.ratio-auto,
+.article-photo-frame.ratio-fit {
+  aspect-ratio: 16 / 9;
+  min-height: 280px;
+  max-height: 550px;
+}
+
+.article-photo-frame.ratio-auto .article-clean-photo,
+.article-photo-frame.ratio-fit .article-clean-photo {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* Rasm Ustidagi Formatni Sozlash Paneli (Interactive Toolbar) */
+.article-photo-toolbar {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.photo-toolbar-glass {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(14, 15, 20, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 4px 6px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.photo-ratio-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 20px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.photo-ratio-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+}
+
+.photo-ratio-btn.active {
+  background: var(--an-red) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px var(--an-red-glow);
 }
 
 .embed-social-wrap {
@@ -1378,14 +1557,17 @@ button {
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .article-media-cover {
   width: 100%;
-  height: 260px;
+  aspect-ratio: 16 / 9;
+  max-height: 480px;
   position: relative;
   overflow: hidden;
   background-color: #000;
+  flex-shrink: 0;
 }
 
 .article-media-cover img {
@@ -2539,9 +2721,26 @@ button {
     border: none !important;
   }
   .youtube-cinema-frame,
-  .local-cinema-frame {
+  .local-cinema-frame,
+  .article-photo-frame,
+  .embed-social-wrap {
     border-radius: 0 !important;
-    margin-bottom: 12px;
+    margin-bottom: 12px !important;
+  }
+  .article-photo-frame {
+    min-height: 200px !important;
+  }
+  .article-photo-toolbar {
+    bottom: 8px !important;
+    right: 8px !important;
+  }
+  .photo-toolbar-glass {
+    padding: 3px 5px !important;
+    gap: 3px !important;
+  }
+  .photo-ratio-btn {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
   }
   .article-text-body {
     padding: 16px 16px 36px !important;

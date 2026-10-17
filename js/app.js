@@ -120,6 +120,7 @@ class AntivirusApp {
     this.currentVideoRatio = '16-9'; // '16-9' | '4-3' | '9-16' | 'fit'
     this.isVideoFitCover = false; // false: to'liq sig'dirish (contain, kesilmaydi), true: to'ldirish (cover)
     this.videoPlaybackRate = 1.0;
+    this.activePhotoRatio = null; // '16:9' | '3:4' | '1:1' | 'auto'
 
     this.init();
   }
@@ -168,16 +169,18 @@ class AntivirusApp {
   setTab(tab) {
     this.currentTab = tab;
     this.activeArticleId = null;
+    this.activePhotoRatio = null;
     this.render();
   }
 
   openArticle(id) {
     this.activeArticleId = id;
+    const article = store.getNewsById(id);
+    this.activePhotoRatio = article?.aspectRatio || '16:9';
     store.incrementViews(id);
     this.render();
 
     // Agar ushbu maqolada mahalliy IndexedDB video bo'lsa, URL olib pleyerga o'rnatamiz
-    const article = store.getNewsById(id);
     if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
       const fileId = article.videoUrl.replace('idb://', '');
       mediaDb.getMediaUrl(fileId).then(blobUrl => {
@@ -192,6 +195,7 @@ class AntivirusApp {
 
   closeArticle() {
     this.activeArticleId = null;
+    this.activePhotoRatio = null;
     if (this.speechSynth) this.speechSynth.cancel();
     this.isAudioPlaying = false;
     this.render();
@@ -208,6 +212,28 @@ class AntivirusApp {
     const btnTheater = document.getElementById('modalSizeTheater');
     if (btnNormal) btnNormal.classList.toggle('active', size === 'normal');
     if (btnTheater) btnTheater.classList.toggle('active', size === 'theater');
+  }
+
+  setPhotoRatio(ratio) {
+    this.activePhotoRatio = ratio;
+    const norm = ratio.replace(':', '-');
+    const frame = document.getElementById('activeArticlePhotoFrame');
+    if (frame) {
+      frame.className = frame.className.replace(/\bratio-[^\s]+\b/g, '').trim();
+      frame.classList.add(`ratio-${norm}`);
+    }
+    const photo = document.getElementById('activeArticleCleanPhoto');
+    if (photo) {
+      photo.className = photo.className.replace(/\bratio-[^\s]+\b/g, '').trim();
+      photo.classList.add(`ratio-${norm}`);
+    }
+    document.querySelectorAll('[data-set-photo-ratio]').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-set-photo-ratio') === ratio);
+    });
+    const ratioBadge = document.getElementById('articleRatioBadge');
+    if (ratioBadge) {
+      ratioBadge.textContent = `📐 ${ratio}`;
+    }
   }
 
   openCfModal(tab = 'stats') {
@@ -969,10 +995,57 @@ class AntivirusApp {
       `;
     }
 
-    // 5. Rasmli xabar (Toza, estetik rasm)
+    // 5. Rasmli xabar (Estetik, proporsional va o'lchamga moslashuvchan)
+    const activeRatio = this.activePhotoRatio || article.aspectRatio || '16:9';
+    const normRatio = activeRatio.replace(':', '-');
+
     return `
-      <div class="article-photo-frame">
-        <img src="${article.imageUrl}" alt="${article.title}" class="article-clean-photo" />
+      <div class="article-photo-frame ratio-${normRatio}" id="activeArticlePhotoFrame">
+        <div class="article-photo-backdrop" style="background-image: url('${article.imageUrl}');"></div>
+        <img
+          id="activeArticleCleanPhoto"
+          src="${article.imageUrl}"
+          alt="${article.title}"
+          class="article-clean-photo ratio-${normRatio}"
+          title="Bosing: Asl o‘lcham / 16:9 o‘rtasida almashtirish"
+          loading="eager"
+        />
+        <div class="article-photo-toolbar">
+          <div class="photo-toolbar-glass">
+            <button
+              type="button"
+              class="photo-ratio-btn ${activeRatio === '16:9' ? 'active' : ''}"
+              data-set-photo-ratio="16:9"
+              title="16:9 (Standart keng format)"
+            >
+              🖥️ 16:9
+            </button>
+            <button
+              type="button"
+              class="photo-ratio-btn ${activeRatio === '3:4' ? 'active' : ''}"
+              data-set-photo-ratio="3:4"
+              title="3:4 (Portret / 3 ga 4)"
+            >
+              📷 3:4
+            </button>
+            <button
+              type="button"
+              class="photo-ratio-btn ${activeRatio === '1:1' ? 'active' : ''}"
+              data-set-photo-ratio="1:1"
+              title="1:1 (Kvadrat)"
+            >
+              ⏹️ 1:1
+            </button>
+            <button
+              type="button"
+              class="photo-ratio-btn ${activeRatio === 'auto' ? 'active' : ''}"
+              data-set-photo-ratio="auto"
+              title="Asl o‘lcham (To‘liq ko‘rish)"
+            >
+              🔍 Asl o‘lcham
+            </button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -989,13 +1062,14 @@ class AntivirusApp {
     const isSaved = store.getSavedIds().includes(article.id);
     const layout = article.mediaLayout || 'top';
     const isVideo = !!article.videoUrl || article.category === 'video';
+    const activeRatio = this.activePhotoRatio || article.aspectRatio || '16:9';
 
     const badgesHtml = `
       <div class="article-badges-row">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <span class="hero-tag-badge">${article.categoryName}</span>
           ${article.source ? `<span class="source-badge">Manba: ${article.source}</span>` : ''}
-          ${article.aspectRatio ? `<span class="source-badge" style="background: rgba(229, 9, 20, 0.12); color: var(--an-red);">📐 ${article.aspectRatio}</span>` : ''}
+          <span class="source-badge" id="articleRatioBadge" style="background: rgba(229, 9, 20, 0.12); color: var(--an-red);">📐 ${activeRatio}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <span>${Icons.clock} ${article.time} • ${article.date}</span>
@@ -2126,6 +2200,26 @@ class AntivirusApp {
     });
     document.getElementById('modalSizeTheater')?.addEventListener('click', () => {
       this.setArticleModalSize(this.articleModalSize === 'theater' ? 'normal' : 'theater');
+    });
+
+    // 14b. Rasm nisbati (Aspect Ratio) ni o'zgartirish (16:9, 3:4, 1:1, auto)
+    document.querySelectorAll('[data-set-photo-ratio]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ratio = e.currentTarget.getAttribute('data-set-photo-ratio');
+        if (ratio) {
+          this.setPhotoRatio(ratio);
+        }
+      });
+    });
+
+    // 14c. Rasm ustiga bosilganda Asl o'lcham va 16:9 o'rtasida tezkor almashish
+    document.getElementById('activeArticleCleanPhoto')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const current = this.activePhotoRatio || '16:9';
+      const next = current === '16:9' ? 'auto' : '16:9';
+      this.setPhotoRatio(next);
+      this.showToast(next === 'auto' ? '🔍 Asl o‘lcham (To‘liq ko‘rinish)' : '🖥️ 16:9 Standart keng format');
     });
 
     // 14d. Video ijro tezligi (Playback Rate)
