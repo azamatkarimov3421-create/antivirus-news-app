@@ -112,6 +112,12 @@ class AntivirusApp {
     this.selectedVideoRatio = '16:9';
     this.selectedVideoLayout = 'top';
 
+    // Video va Modal kattalashtirish/kichiklashtirish va barcha qulayliklar
+    this.articleModalSize = 'normal'; // 'compact' | 'normal' | 'theater' | 'fullscreen'
+    this.currentVideoRatio = '16-9'; // '16-9' | '4-3' | '9-16' | 'fit'
+    this.isVideoFitCover = false; // false: to'liq sig'dirish (contain, kesilmaydi), true: to'ldirish (cover)
+    this.videoPlaybackRate = 1.0;
+
     this.init();
   }
 
@@ -729,8 +735,9 @@ class AntivirusApp {
   // Maqola/Video media renderi (YouTube, Instagram, Telegram, Mahalliy fayl, Rasm)
   // Ambient yumshoq fon yordamida ekranda hech qanday xunuk qora chiziqlar va buglarsiz moslashadi
   renderArticleMedia(article) {
-    const rawRatio = article.aspectRatio || (article.videoUrl ? '16:9' : '16:9');
-    const ratioClass = `ratio-${rawRatio.replace(':', '-')}`;
+    const isVideo = !!article.videoUrl || article.category === 'video';
+    const effectiveRatio = this.currentVideoRatio || (article.aspectRatio ? article.aspectRatio.replace(':', '-') : '16-9');
+    const ratioClass = `ratio-${effectiveRatio}`;
     const posterUrl = article.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80';
 
     let mediaContent = '';
@@ -742,6 +749,7 @@ class AntivirusApp {
       if (parsed.type === 'youtube') {
         mediaContent = `
           <iframe
+            id="activeArticleIframePlayer"
             src="${parsed.embedUrl}"
             style="width: 100%; height: 100%; border: none;"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -798,7 +806,7 @@ class AntivirusApp {
             controls
             autoplay
             playsinline
-            style="width: 100%; height: 100%;"
+            style="width: 100%; height: 100%; object-fit: ${this.isVideoFitCover ? 'cover' : 'contain'};"
           ></video>
         `;
       }
@@ -806,21 +814,60 @@ class AntivirusApp {
       else {
         mediaContent = `
           <video
+            id="activeArticleVideoPlayer"
             src="${parsed.embedUrl}"
             poster="${article.imageUrl}"
             controls
             autoplay
             playsinline
-            style="width: 100%; height: 100%;"
+            style="width: 100%; height: 100%; object-fit: ${this.isVideoFitCover ? 'cover' : 'contain'};"
           ></video>
         `;
       }
     } else {
       // 6. Rasmli xabar (16:9, 3:4, 1:1, auto formatda xira fon bilan buglarsiz)
       mediaContent = `
-        <img src="${article.imageUrl}" alt="${article.title}" />
+        <img src="${article.imageUrl}" alt="${article.title}" style="object-fit: ${this.isVideoFitCover ? 'cover' : 'contain'};" />
       `;
     }
+
+    const videoToolbarHtml = isVideo ? `
+      <!-- Video Qulayliklar va Moslashuv Paneli -->
+      <div class="video-toolbar-panel">
+        <div class="v-toolbar-section">
+          <span class="v-toolbar-label">Format:</span>
+          <button class="v-pill-btn ${effectiveRatio === '16-9' ? 'active' : ''}" data-set-ratio="16-9" title="16:9 Keng format">16:9</button>
+          <button class="v-pill-btn ${effectiveRatio === '4-3' ? 'active' : ''}" data-set-ratio="4-3" title="4:3 Klassik format">4:3</button>
+          <button class="v-pill-btn ${effectiveRatio === '9-16' ? 'active' : ''}" data-set-ratio="9-16" title="9:16 Tik Reels format">9:16</button>
+          <button class="v-pill-btn ${effectiveRatio === 'fit' ? 'active' : ''}" data-set-ratio="fit" title="To‘liq sig‘dirish (hech qayeri kesilmaydi)">Sig‘dirish</button>
+        </div>
+
+        <div class="v-toolbar-section v-toolbar-right">
+          <div class="v-speed-group">
+            <span class="v-toolbar-label">Tezlik:</span>
+            <select class="v-speed-dropdown" id="vSpeedDropdown" title="Ijro tezligi">
+              <option value="0.75" ${this.videoPlaybackRate === 0.75 ? 'selected' : ''}>0.75x</option>
+              <option value="1" ${this.videoPlaybackRate === 1 ? 'selected' : ''}>1.0x</option>
+              <option value="1.25" ${this.videoPlaybackRate === 1.25 ? 'selected' : ''}>1.25x</option>
+              <option value="1.5" ${this.videoPlaybackRate === 1.5 ? 'selected' : ''}>1.5x</option>
+              <option value="2" ${this.videoPlaybackRate === 2 ? 'selected' : ''}>2.0x</option>
+            </select>
+          </div>
+
+          <button class="v-action-btn" id="vCoverToggleBtn" title="Videoni ekranga to'ldirish yoki to'liq sig'dirish">
+            <span>${this.isVideoFitCover ? '🔲 Asl o‘lcham' : '🔳 To‘ldirish'}</span>
+          </button>
+
+          <button class="v-action-btn" id="vPipActionBtn" title="Suzuvchi mini oyna (Picture-in-Picture)">
+            <span>🗗 Mini oyna</span>
+          </button>
+
+          <button class="v-action-btn" id="vFullscreenActionBtn" title="Videoni to'liq ekranda ko'rish">
+            <span>⛶ To‘liq ekran</span>
+          </button>
+        </div>
+      </div>
+    ` : '';
 
     return `
       <div class="media-ambient-wrapper ${ratioClass}">
@@ -829,6 +876,7 @@ class AntivirusApp {
           ${mediaContent}
         </div>
       </div>
+      ${videoToolbarHtml}
     `;
   }
 
@@ -902,8 +950,27 @@ class AntivirusApp {
 
     return `
       <div class="article-reader-backdrop open" id="articleBackdrop">
-        <div class="article-reader-modal ${layout === 'cinematic' ? 'layout-cinematic' : ''}">
-          <button class="close-modal-round" id="closeReaderBtn">${Icons.close}</button>
+        <div class="article-reader-modal modal-size-${this.articleModalSize} ${layout === 'cinematic' ? 'layout-cinematic' : ''}" id="articleReaderModal">
+          <!-- Oyna Yuqori Paneli: Kattalashtirish / Kichiklashtirish / Kengaytirish va Yopish -->
+          <div class="modal-window-header">
+            <div class="modal-size-controls">
+              <span class="modal-size-tag">Oyna o‘lchami:</span>
+              <button class="modal-size-btn ${this.articleModalSize === 'compact' ? 'active' : ''}" id="modalSizeCompact" title="Kichiklashtirish (Ixcham)">
+                🔍- Kichik
+              </button>
+              <button class="modal-size-btn ${this.articleModalSize === 'normal' ? 'active' : ''}" id="modalSizeNormal" title="Standart o‘lcham">
+                Standart
+              </button>
+              <button class="modal-size-btn ${this.articleModalSize === 'theater' ? 'active' : ''}" id="modalSizeTheater" title="Kattalashtirish (Kino rejimi / Keng ekran)">
+                🔍+ Kengaytirish
+              </button>
+              <button class="modal-size-btn ${this.articleModalSize === 'fullscreen' ? 'active' : ''}" id="modalSizeFullscreen" title="To‘liq ekran (Fullscreen)">
+                ⛶ To‘liq ekran
+              </button>
+            </div>
+
+            <button class="close-modal-round" id="closeReaderBtn" title="Yopish (Esc)">${Icons.close}</button>
+          </div>
 
           ${layout === 'text_first' ? `
             <div class="article-text-body" style="padding-bottom: 12px;">
@@ -1879,6 +1946,96 @@ class AntivirusApp {
     document.getElementById('articleBackdrop')?.addEventListener('click', (e) => {
       if (e.target.id === 'articleBackdrop') this.closeArticle();
     });
+
+    // 14a. Oyna o'lchamini o'zgartirish (Kichiklashtirish / Standart / Kengaytirish / To'liq ekran)
+    document.getElementById('modalSizeCompact')?.addEventListener('click', () => {
+      this.articleModalSize = 'compact';
+      this.render();
+    });
+    document.getElementById('modalSizeNormal')?.addEventListener('click', () => {
+      this.articleModalSize = 'normal';
+      this.render();
+    });
+    document.getElementById('modalSizeTheater')?.addEventListener('click', () => {
+      this.articleModalSize = this.articleModalSize === 'theater' ? 'normal' : 'theater';
+      this.render();
+    });
+    document.getElementById('modalSizeFullscreen')?.addEventListener('click', () => {
+      const modal = document.getElementById('articleReaderModal');
+      if (modal) {
+        if (!document.fullscreenElement) {
+          modal.requestFullscreen?.().catch(() => {});
+          this.articleModalSize = 'fullscreen';
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+          this.articleModalSize = 'normal';
+        }
+        this.render();
+      }
+    });
+
+    // 14b. Video nisbatini (Aspect Ratio) o'zgartirish
+    document.querySelectorAll('[data-set-ratio]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const ratio = e.currentTarget.getAttribute('data-set-ratio');
+        if (ratio) {
+          this.currentVideoRatio = ratio;
+          this.render();
+        }
+      });
+    });
+
+    // 14c. Videoni to'liq sig'dirish (contain) yoki to'ldirish (cover)
+    document.getElementById('vCoverToggleBtn')?.addEventListener('click', () => {
+      this.isVideoFitCover = !this.isVideoFitCover;
+      this.render();
+    });
+
+    // 14d. Video ijro tezligi (Playback Rate)
+    document.getElementById('vSpeedDropdown')?.addEventListener('change', (e) => {
+      const rate = parseFloat(e.target.value) || 1.0;
+      this.videoPlaybackRate = rate;
+      const player = document.getElementById('activeArticleVideoPlayer');
+      if (player) player.playbackRate = rate;
+    });
+
+    // 14e. Picture-in-Picture (Suzuvchi mini oyna)
+    document.getElementById('vPipActionBtn')?.addEventListener('click', async () => {
+      const video = document.getElementById('activeArticleVideoPlayer');
+      if (video) {
+        try {
+          if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+          } else if (document.pictureInPictureEnabled) {
+            await video.requestPictureInPicture();
+          } else {
+            alert('Brauzeringiz Picture-in-Picture (Mini oyna) funksiyasini qo‘llab-quvvatlamaydi.');
+          }
+        } catch (err) {
+          console.warn('PiP xatolik:', err);
+        }
+      } else {
+        alert('Ushbu video turi uchun mini oyna to‘g‘ridan-to‘g‘ri pleyerning o‘zida mavjud.');
+      }
+    });
+
+    // 14f. Video to'liq ekran (Fullscreen)
+    document.getElementById('vFullscreenActionBtn')?.addEventListener('click', () => {
+      const wrapper = document.querySelector('.media-ambient-wrapper');
+      if (wrapper) {
+        if (!document.fullscreenElement) {
+          wrapper.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      }
+    });
+
+    // 14g. Pleyerga joriy tezlikni qo'llash
+    const activeVideo = document.getElementById('activeArticleVideoPlayer');
+    if (activeVideo && this.videoPlaybackRate) {
+      activeVideo.playbackRate = this.videoPlaybackRate;
+    }
 
     // 15. Audio eshitish
     document.getElementById('articleAudioBtn')?.addEventListener('click', () => {
