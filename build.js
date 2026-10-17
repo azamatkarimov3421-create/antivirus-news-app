@@ -31,7 +31,8 @@ const itemsToCopy = [
   'sw.js',
   'privacy.html',
   '.well-known',
-  'vercel.json'
+  'vercel.json',
+  'download'
 ];
 
 // Ham public, ham dist papkalarini yaratish va to'ldirish
