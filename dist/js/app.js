@@ -266,26 +266,57 @@ class AntivirusApp {
 
     root.innerHTML = `
       <div class="app-container" data-theme="${theme}">
-        <!-- 1. Header (Logotip, Qidiruv, Cloudflare, Rejim) -->
+        <!-- 1. Header (Logotip, Desktop Menyu, Qidiruv, Cloudflare, Rejim) -->
         <header class="site-header">
-          <div class="brand-identity" data-tab-link="home">
-            <span class="brand-an-badge">AN</span>
-            <div class="brand-texts">
-              <span class="brand-title">ANTIVIRUS</span>
-              <span class="brand-sub">NEWS</span>
+          <div class="site-header-inner">
+            <div class="brand-identity" data-tab-link="home">
+              <span class="brand-an-badge">AN</span>
+              <div class="brand-texts">
+                <span class="brand-title">ANTIVIRUS</span>
+                <span class="brand-sub">NEWS</span>
+              </div>
             </div>
-          </div>
 
-          <div class="header-controls">
-            <button class="icon-btn" id="themeSwitchBtn" title="Rejimni almashtirish">
-              ${theme === 'dark' ? Icons.sun : Icons.moon}
-            </button>
-            <button class="icon-btn" id="searchTriggerBtn" title="Qidiruv">
-              ${Icons.search}
-            </button>
-            <button class="icon-btn" id="notifBellBtn" title="Bildirishnomalar">
-              ${Icons.bell}
-            </button>
+            <!-- Faqat Katta Ekranda (Desktop) Ko'rinuvchi Asosiy Navigatsiya -->
+            <nav class="desktop-main-nav">
+              <button class="desktop-nav-link ${this.currentTab === 'home' ? 'active' : ''}" data-tab-link="home">
+                <span>${Icons.home}</span>
+                <span>Asosiy</span>
+              </button>
+              <button class="desktop-nav-link ${this.currentTab === 'trend' ? 'active' : ''}" data-tab-link="trend">
+                <span>${Icons.trendingUp}</span>
+                <span>Trend</span>
+              </button>
+              <button class="desktop-nav-link ${this.currentTab === 'video' ? 'active' : ''}" data-tab-link="video">
+                <span>${Icons.playCircle}</span>
+                <span>Video</span>
+              </button>
+              <button class="desktop-nav-link ${this.currentTab === 'menu' ? 'active' : ''}" data-tab-link="menu">
+                <span>${Icons.menu}</span>
+                <span>Barchasi</span>
+              </button>
+            </nav>
+
+            <div class="header-controls">
+              <!-- Kompyuter foydalanuvchisi uchun to'g'ridan-to'g'ri APK yuklab olish tugmasi -->
+              <a href="/download/antivirus-news.apk" class="desktop-apk-pill" download title="Android ilovani yuklab olish">
+                <span class="apk-pill-icon">📱</span>
+                <span class="apk-pill-text">Ilova (.APK)</span>
+              </a>
+
+              <button class="icon-btn" id="themeSwitchBtn" title="Rejimni almashtirish">
+                ${theme === 'dark' ? Icons.sun : Icons.moon}
+              </button>
+              <button class="icon-btn" id="searchTriggerBtn" title="Qidiruv">
+                ${Icons.search}
+              </button>
+              <button class="icon-btn" id="notifBellBtn" title="Bildirishnomalar">
+                ${Icons.bell}
+              </button>
+              <button class="icon-btn desktop-admin-quick-btn" id="desktopAdminBtn" title="Admin Baza Paneli" style="color: var(--an-red);">
+                ${Icons.database}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -297,7 +328,7 @@ class AntivirusApp {
           ${this.renderActiveTabContent()}
         </main>
 
-        <!-- 4. Pastki Navigatsiya Bar (Bottom Bar) -->
+        <!-- 4. Pastki Navigatsiya Bar (Faqat Mobil Ekranda) -->
         <nav class="bottom-navigation-bar">
           <div class="nav-bottom-item ${this.currentTab === 'home' ? 'active' : ''}" data-tab-link="home">
             <span>${Icons.home}</span>
@@ -339,13 +370,18 @@ class AntivirusApp {
   // Gorizontal toifalar tasmasi
   renderCategoryTabs(categories) {
     return `
-      <nav class="category-tabs-bar">
-        ${categories.slice(0, 7).map(c => `
-          <div class="cat-tab-item ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-select="${c.id}">
-            ${c.name}
+      <div class="category-tabs-container">
+        <nav class="category-tabs-bar">
+          <div class="cat-tab-item ${this.selectedCategory === 'all' ? 'active' : ''}" data-cat-select="all">
+            Barchasi
           </div>
-        `).join('')}
-      </nav>
+          ${categories.slice(0, 8).map(c => `
+            <div class="cat-tab-item ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-select="${c.id}">
+              ${c.name}
+            </div>
+          `).join('')}
+        </nav>
+      </div>
     `;
   }
 
@@ -381,82 +417,165 @@ class AntivirusApp {
 
     const heroNews = list.find(n => n.isHero) || list[0];
     const streamNews = list.filter(n => n.id !== heroNews?.id);
+    const topReadNews = [...newsList].sort((a, b) => b.views - a.views).slice(0, 5);
 
     return `
-      <!-- 1. Katta Hero Slayder Kartasi -->
-      ${heroNews ? `
-        <div class="hero-card-banner" data-open-id="${heroNews.id}">
-          <img class="hero-card-img" src="${heroNews.imageUrl}" alt="${heroNews.title}" />
-          <div class="hero-card-gradient"></div>
-          <div class="hero-card-info">
-            <span class="hero-tag-badge">${heroNews.categoryName}</span>
-            <h3 class="hero-card-title">${heroNews.title}</h3>
-            <div class="hero-card-meta">
-              <div class="hero-meta-left">
-                <span>${Icons.clock} ${heroNews.time}</span>
-                <span>${Icons.calendar} ${heroNews.date}</span>
-                <span>${Icons.eye} ${heroNews.views.toLocaleString()}</span>
+      <div class="desktop-home-layout">
+        <!-- Chap / Markaziy Asosiy Ustun -->
+        <div class="desktop-main-column">
+          <!-- 1. Katta Hero Slayder Kartasi -->
+          ${heroNews ? `
+            <div class="hero-card-banner" data-open-id="${heroNews.id}">
+              <img class="hero-card-img" src="${heroNews.imageUrl}" alt="${heroNews.title}" />
+              <div class="hero-card-gradient"></div>
+              <div class="hero-card-info">
+                <span class="hero-tag-badge">${heroNews.categoryName || 'ASOSIY'}</span>
+                <h3 class="hero-card-title">${heroNews.title}</h3>
+                <div class="hero-card-meta">
+                  <div class="hero-meta-left">
+                    <span>${Icons.clock} ${heroNews.time}</span>
+                    <span>${Icons.calendar} ${heroNews.date}</span>
+                    <span>${Icons.eye} ${heroNews.views.toLocaleString()}</span>
+                  </div>
+                  <div class="hero-dots-row">
+                    <span class="hero-dot-active"></span>
+                    <span class="hero-dot-normal"></span>
+                    <span class="hero-dot-normal"></span>
+                    <span class="hero-dot-normal"></span>
+                  </div>
+                </div>
               </div>
-              <div class="hero-dots-row">
-                <span class="hero-dot-active"></span>
-                <span class="hero-dot-normal"></span>
-                <span class="hero-dot-normal"></span>
-                <span class="hero-dot-normal"></span>
+            </div>
+          ` : ''}
+
+          <!-- 2. 6 ta Tezkor Toifa Tugmalari -->
+          <div class="quick-categories-grid">
+            <div class="quick-cat-box ${this.selectedCategory === 'siyosat' ? 'active' : ''}" data-cat-select="siyosat">
+              <div class="quick-cat-icon" style="color: #E50914;">${Icons.landmark}</div>
+              <span class="quick-cat-label">Siyosat</span>
+            </div>
+            <div class="quick-cat-box ${this.selectedCategory === 'dunyo' ? 'active' : ''}" data-cat-select="dunyo">
+              <div class="quick-cat-icon" style="color: #2563EB;">${Icons.globe}</div>
+              <span class="quick-cat-label">Dunyo</span>
+            </div>
+            <div class="quick-cat-box ${this.selectedCategory === 'jamiyat' ? 'active' : ''}" data-cat-select="jamiyat">
+              <div class="quick-cat-icon" style="color: #DC2626;">${Icons.users}</div>
+              <span class="quick-cat-label">Jamiyat</span>
+            </div>
+            <div class="quick-cat-box ${this.selectedCategory === 'biznes' ? 'active' : ''}" data-cat-select="biznes">
+              <div class="quick-cat-icon" style="color: #EA580C;">${Icons.barChart}</div>
+              <span class="quick-cat-label">Biznes</span>
+            </div>
+            <div class="quick-cat-box ${this.selectedCategory === 'sport' ? 'active' : ''}" data-cat-select="sport">
+              <div class="quick-cat-icon" style="color: #16A34A;">${Icons.trophy}</div>
+              <span class="quick-cat-label">Sport</span>
+            </div>
+            <div class="quick-cat-box" data-tab-link="menu">
+              <div class="quick-cat-icon" style="color: #94A3B8;">${Icons.grid}</div>
+              <span class="quick-cat-label">Barchasi</span>
+            </div>
+          </div>
+
+          <!-- 3. So'nggi Yangiliklar Ro'yxati -->
+          <div class="section-headline-bar">
+            <h2 class="headline-text">
+              ${this.searchQuery ? `Qidiruv: "${this.searchQuery}"` : 'So‘nggi yangiliklar'}
+            </h2>
+            <span class="headline-link-more" data-tab-link="menu">Barchasi ${Icons.chevronRight}</span>
+          </div>
+
+          <div class="news-stream-container">
+            ${streamNews.map(n => `
+              <div class="news-item-card" data-open-id="${n.id}">
+                <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
+                <div class="news-item-details">
+                  <h4 class="news-item-title">${n.title}</h4>
+                  <div class="news-item-meta">
+                    <span>${Icons.clock} ${n.time}</span>
+                    <span>${Icons.eye} ${n.views.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- O'ng Yon Panel (Faqat Kompyuter / Desktop ekranda ko'rinadi) -->
+        <aside class="desktop-sidebar">
+          <!-- Widget 1: Eng ko'p o'qilganlar -->
+          <div class="sidebar-widget">
+            <div class="widget-header">
+              <span class="widget-icon" style="color: var(--an-red);">${Icons.trendingUp}</span>
+              <h3 class="widget-title">Eng ko‘p o‘qilganlar</h3>
+            </div>
+            <div class="sidebar-top-news-list">
+              ${topReadNews.map((n, i) => `
+                <div class="sidebar-news-item" data-open-id="${n.id}">
+                  <span class="sidebar-num-badge num-${i + 1}">${i + 1}</span>
+                  <div class="sidebar-news-info">
+                    <h5 class="sidebar-news-title">${n.title}</h5>
+                    <span class="sidebar-news-meta">${Icons.eye} ${n.views.toLocaleString()} • ${n.time}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Widget 2: Android Ilova Banneri -->
+          <div class="sidebar-widget app-download-banner">
+            <div class="app-banner-icon">AN</div>
+            <div class="app-banner-content">
+              <h4 class="app-banner-title">ANTIVIRUS NEWS Ilovasi</h4>
+              <p class="app-banner-subtitle">Android telefoningiz uchun tezkor, engil va xolis yangiliklar ilovasi.</p>
+              <a href="/download/antivirus-news.apk" class="app-banner-download-btn" download>
+                📥 APK Yuklab Olish (1.2 MB)
+              </a>
+            </div>
+          </div>
+
+          <!-- Widget 3: Valyuta Kurslari -->
+          <div class="sidebar-widget info-ticker-widget">
+            <div class="widget-header">
+              <span class="widget-icon">📈</span>
+              <h3 class="widget-title">Markaziy Bank Kurslari</h3>
+            </div>
+            <div class="currency-rates-grid">
+              <div class="currency-rate-item">
+                <span class="curr-flag">🇺🇸 USD</span>
+                <span class="curr-val">12 850</span>
+                <span class="curr-diff up">▲ +12</span>
+              </div>
+              <div class="currency-rate-item">
+                <span class="curr-flag">🇪🇺 EUR</span>
+                <span class="curr-val">13 920</span>
+                <span class="curr-diff up">▲ +18</span>
+              </div>
+              <div class="currency-rate-item">
+                <span class="curr-flag">🇷🇺 RUB</span>
+                <span class="curr-val">132.5</span>
+                <span class="curr-diff down">▼ -0.3</span>
               </div>
             </div>
           </div>
-        </div>
-      ` : ''}
 
-      <!-- 2. 6 ta Tezkor Toifa Tugmalari (Mockupdagi kabi) -->
-      <div class="quick-categories-grid">
-        <div class="quick-cat-box ${this.selectedCategory === 'siyosat' ? 'active' : ''}" data-cat-select="siyosat">
-          <div class="quick-cat-icon" style="color: #E50914;">${Icons.landmark}</div>
-          <span class="quick-cat-label">Siyosat</span>
-        </div>
-        <div class="quick-cat-box ${this.selectedCategory === 'dunyo' ? 'active' : ''}" data-cat-select="dunyo">
-          <div class="quick-cat-icon" style="color: #2563EB;">${Icons.globe}</div>
-          <span class="quick-cat-label">Dunyo</span>
-        </div>
-        <div class="quick-cat-box ${this.selectedCategory === 'jamiyat' ? 'active' : ''}" data-cat-select="jamiyat">
-          <div class="quick-cat-icon" style="color: #DC2626;">${Icons.users}</div>
-          <span class="quick-cat-label">Jamiyat</span>
-        </div>
-        <div class="quick-cat-box ${this.selectedCategory === 'biznes' ? 'active' : ''}" data-cat-select="biznes">
-          <div class="quick-cat-icon" style="color: #EA580C;">${Icons.barChart}</div>
-          <span class="quick-cat-label">Biznes</span>
-        </div>
-        <div class="quick-cat-box ${this.selectedCategory === 'sport' ? 'active' : ''}" data-cat-select="sport">
-          <div class="quick-cat-icon" style="color: #16A34A;">${Icons.trophy}</div>
-          <span class="quick-cat-label">Sport</span>
-        </div>
-        <div class="quick-cat-box" data-tab-link="menu">
-          <div class="quick-cat-icon" style="color: #94A3B8;">${Icons.grid}</div>
-          <span class="quick-cat-label">Barchasi</span>
-        </div>
-      </div>
-
-      <!-- 3. So'nggi Yangiliklar Ro'yxati -->
-      <div class="section-headline-bar">
-        <h2 class="headline-text">
-          ${this.searchQuery ? `Qidiruv: "${this.searchQuery}"` : 'So‘nggi yangiliklar'}
-        </h2>
-        <span class="headline-link-more" data-tab-link="menu">Barchasi ${Icons.chevronRight}</span>
-      </div>
-
-      <div class="news-stream-container">
-        ${streamNews.map(n => `
-          <div class="news-item-card" data-open-id="${n.id}">
-            <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
-            <div class="news-item-details">
-              <h4 class="news-item-title">${n.title}</h4>
-              <div class="news-item-meta">
-                <span>${Icons.clock} ${n.time}</span>
-                <span>${Icons.eye} ${n.views.toLocaleString()}</span>
-              </div>
+          <!-- Widget 4: Ijtimoiy Tarmoqlar -->
+          <div class="sidebar-widget social-widget">
+            <div class="widget-header">
+              <h3 class="widget-title">Biz ijtimoiy tarmoqlarda</h3>
+            </div>
+            <div class="sidebar-social-links">
+              <a href="https://t.me" target="_blank" class="social-pill-btn tg">
+                ${Icons.telegram} <span>Telegram</span>
+              </a>
+              <a href="https://youtube.com" target="_blank" class="social-pill-btn yt">
+                ${Icons.youtube} <span>YouTube</span>
+              </a>
+              <a href="https://instagram.com" target="_blank" class="social-pill-btn ig">
+                ${Icons.instagram} <span>Instagram</span>
+              </a>
             </div>
           </div>
-        `).join('')}
+        </aside>
       </div>
     `;
   }
@@ -579,9 +698,9 @@ class AntivirusApp {
         <span style="font-size: 11px; color: var(--text-dim);">${videoList.length} ta video</span>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="videos-grid-container">
         ${videoList.map(v => `
-          <div class="hero-card-banner" style="height: 220px; cursor: pointer;" data-open-id="${v.id}">
+          <div class="hero-card-banner video-card-item" data-open-id="${v.id}">
             <img class="hero-card-img" src="${v.imageUrl}" alt="${v.title}" />
             <div class="hero-card-gradient"></div>
             
@@ -1257,6 +1376,9 @@ class AntivirusApp {
     };
     document.getElementById('searchTriggerBtn')?.addEventListener('click', handleSearch);
     document.getElementById('menuSearchBtn')?.addEventListener('click', handleSearch);
+    document.getElementById('desktopAdminBtn')?.addEventListener('click', () => {
+      this.openCfModal('stats');
+    });
 
     // 3. Bildirishnomalar
     document.getElementById('notifBellBtn')?.addEventListener('click', () => {
