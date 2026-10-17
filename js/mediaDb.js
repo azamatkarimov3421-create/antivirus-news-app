@@ -199,13 +199,23 @@ export function captureVideoMetadata(fileOrBlob) {
           ctx.drawImage(video, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
+          const origW = video.videoWidth || 640;
+          const origH = video.videoHeight || 360;
+          let suggestedRatio = '16:9';
+          const aspect = origW / origH;
+          if (aspect < 0.65) suggestedRatio = '9:16';
+          else if (aspect < 0.9) suggestedRatio = '3:4';
+          else if (aspect <= 1.15) suggestedRatio = '1:1';
+          else suggestedRatio = '16:9';
+
           cleanup();
           resolve({
             thumbnailUrl: dataUrl,
             durationSec,
             durationFormatted,
-            width,
-            height
+            width: origW,
+            height: origH,
+            suggestedRatio
           });
         } catch (err) {
           cleanup();
@@ -214,7 +224,8 @@ export function captureVideoMetadata(fileOrBlob) {
             durationSec,
             durationFormatted,
             width: video.videoWidth || 0,
-            height: video.videoHeight || 0
+            height: video.videoHeight || 0,
+            suggestedRatio: '16:9'
           });
         }
       };
@@ -233,7 +244,8 @@ export function captureVideoMetadata(fileOrBlob) {
         durationSec: 0,
         durationFormatted: '00:00',
         width: 0,
-        height: 0
+        height: 0,
+        suggestedRatio: '16:9'
       });
     }, 8000);
   });
@@ -256,6 +268,13 @@ export function processImageFile(file, maxWidth = 1200, quality = 0.82) {
         let width = img.width;
         let height = img.height;
 
+        let suggestedRatio = '16:9';
+        const aspect = width / height;
+        if (aspect < 0.65) suggestedRatio = '9:16';
+        else if (aspect < 0.9) suggestedRatio = '3:4';
+        else if (aspect <= 1.15) suggestedRatio = '1:1';
+        else suggestedRatio = '16:9';
+
         if (width > maxWidth) {
           height = Math.round((height * maxWidth) / width);
           width = maxWidth;
@@ -268,7 +287,12 @@ export function processImageFile(file, maxWidth = 1200, quality = 0.82) {
         ctx.drawImage(img, 0, 0, width, height);
 
         const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
+        resolve({
+          dataUrl: compressedDataUrl,
+          width: img.width,
+          height: img.height,
+          suggestedRatio
+        });
       };
       img.onerror = reject;
       img.src = e.target.result;

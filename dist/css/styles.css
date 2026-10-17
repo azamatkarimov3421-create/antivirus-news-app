@@ -1557,5 +1557,213 @@ button {
   opacity: 0.85;
 }
 
+/* ==========================================================================
+   ASPECT RATIO (16:9, 3:4, 9:16, 1:1) & AMBIENT BUG-FREE DISPLAY
+   ========================================================================== */
+
+/* Proportsiya va Tartib tanlash tugmalari */
+.ratio-selector-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+.ratio-pill-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.18s ease;
+}
+
+.ratio-pill-btn:hover {
+  border-color: var(--an-red);
+  color: var(--text-main);
+}
+
+.ratio-pill-btn.active {
+  background: var(--an-red);
+  color: #FFFFFF;
+  border-color: var(--an-red);
+  box-shadow: 0 2px 10px var(--an-red-glow);
+}
+
+/* Fon va Tartib tanlagich */
+.layout-selector-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+.layout-pill-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s ease;
+}
+
+.layout-pill-btn.active {
+  background: rgba(229, 9, 20, 0.15);
+  color: var(--an-red);
+  border-color: var(--an-red);
+}
+
+/* Ambient Blur Wrapper (Ekranni buglarsiz, chiroyli to'ldiruvchi yumshoq fon) */
+.media-ambient-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.media-ambient-backdrop {
+  position: absolute;
+  inset: -30px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(36px) brightness(0.38) saturate(1.5);
+  opacity: 0.85;
+  pointer-events: none;
+  transform: scale(1.15);
+  transition: background-image 0.3s ease;
+}
+
+.media-ambient-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 1. 16:9 Gorizontal (YouTube, Kino, Standart) */
+.media-ambient-content.ratio-16-9,
+.ratio-16-9 {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 520px;
+}
+
+/* 2. 3:4 Portret (3 ga 4 — Vertikal foto va reportaj video) */
+.media-ambient-content.ratio-3-4,
+.ratio-3-4 {
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 3 / 4;
+  max-height: 550px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.55);
+}
+
+/* 3. 9:16 Vertikal (Shorts, Reels, TikTok) */
+.media-ambient-content.ratio-9-16,
+.ratio-9-16 {
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 9 / 16;
+  max-height: 600px;
+  margin: 0 auto;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+/* 4. 1:1 Kvadrat (Instagram Post) */
+.media-ambient-content.ratio-1-1,
+.ratio-1-1 {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 1 / 1;
+  max-height: 480px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+}
+
+/* 5. Avto o'lcham */
+.media-ambient-content.ratio-auto,
+.ratio-auto {
+  width: 100%;
+  max-height: 580px;
+}
+
+/* Rasm va Video elementlarining toza joylashishi */
+.media-ambient-content img,
+.media-ambient-content video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.media-ambient-content.ratio-16-9 img,
+.media-ambient-content.ratio-16-9 video {
+  object-fit: cover;
+}
+
+.media-ambient-content iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Tartib rejimlari: Kinematik */
+.article-reader-modal.layout-cinematic .media-ambient-wrapper {
+  border-radius: 0;
+  max-height: 65vh;
+}
+
+.article-reader-modal.layout-cinematic .article-text-body {
+  margin-top: -24px;
+  position: relative;
+  z-index: 5;
+  background: var(--bg-surface);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -8px 25px rgba(0,0,0,0.3);
+}
+
+/* Ratio nishonchasi (Feedda) */
+.ratio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+}
+
+
 
 

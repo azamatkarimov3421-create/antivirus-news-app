@@ -84,13 +84,11 @@ export default {
         const time = body.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         const date = body.date || `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
 
-        // Jadvalga source va source_url ustunlari borligiga ishonch hosil qilish
-        try {
-          await env.DB.prepare('ALTER TABLE news ADD COLUMN source TEXT').run();
-        } catch (e) {}
-        try {
-          await env.DB.prepare('ALTER TABLE news ADD COLUMN source_url TEXT').run();
-        } catch (e) {}
+        // Jadvalga source, source_url, aspect_ratio va media_layout ustunlari borligiga ishonch hosil qilish
+        try { await env.DB.prepare('ALTER TABLE news ADD COLUMN source TEXT').run(); } catch (e) {}
+        try { await env.DB.prepare('ALTER TABLE news ADD COLUMN source_url TEXT').run(); } catch (e) {}
+        try { await env.DB.prepare('ALTER TABLE news ADD COLUMN aspect_ratio TEXT').run(); } catch (e) {}
+        try { await env.DB.prepare('ALTER TABLE news ADD COLUMN media_layout TEXT').run(); } catch (e) {}
 
         // Agar bu yangilik is_hero bo'lsa, qolganlarini 0 qilish
         if (body.isHero) {
@@ -98,8 +96,8 @@ export default {
         }
 
         await env.DB.prepare(
-          `INSERT INTO news (id, title, category, category_name, time, date, views, is_hero, is_trending, image_url, summary, content, author, read_time, tags, video_url, source, source_url)
-           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO news (id, title, category, category_name, time, date, views, is_hero, is_trending, image_url, summary, content, author, read_time, tags, video_url, source, source_url, aspect_ratio, media_layout)
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id,
           body.title || 'Sarlavhasiz yangilik',
@@ -117,7 +115,9 @@ export default {
           Array.isArray(body.tags) ? body.tags.join(',') : (body.tags || 'Yangilik'),
           body.videoUrl || null,
           body.source || 'ANTIVIRUS Tahririyati',
-          body.sourceUrl || ''
+          body.sourceUrl || '',
+          body.aspectRatio || '16:9',
+          body.mediaLayout || 'top'
         ).run();
 
         return new Response(JSON.stringify({ success: true, id }), {

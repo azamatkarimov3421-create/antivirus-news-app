@@ -331,7 +331,10 @@ class NewsStore {
       sourceUrl: newsData.sourceUrl || '',
       readTime: newsData.readTime || '3 daqiqa',
       tags: newsData.tags ? (Array.isArray(newsData.tags) ? newsData.tags : newsData.tags.split(',').map(s => s.trim())) : ['Yangilik'],
-      videoUrl: newsData.videoUrl || null
+      videoUrl: newsData.videoUrl || null,
+      // Video va Rasm ko'rinish formati (16:9, 3:4, 9:16, 1:1, auto) va joylashuv tartibi
+      aspectRatio: newsData.aspectRatio || '16:9',
+      mediaLayout: newsData.mediaLayout || 'top'
     };
 
     if (newArticle.isHero) {

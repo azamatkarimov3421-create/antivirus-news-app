@@ -106,6 +106,12 @@ class AntivirusApp {
     this.pendingVideoSource = 'YouTube';
     this.pendingNewsImageUrl = '';
 
+    // Video va Rasm ko'rinish formati (16:9, 3:4, 9:16, 1:1, auto) va joylashuv tartibi
+    this.selectedNewsRatio = '16:9';
+    this.selectedNewsLayout = 'top';
+    this.selectedVideoRatio = '16:9';
+    this.selectedVideoLayout = 'top';
+
     this.init();
   }
 
@@ -601,29 +607,33 @@ class AntivirusApp {
     `;
   }
 
-  // Maqola/Video media renderi (YouTube, Instagram, Telegram, Mahalliy fayl)
+  // Maqola/Video media renderi (YouTube, Instagram, Telegram, Mahalliy fayl, Rasm)
+  // Ambient yumshoq fon yordamida ekranda hech qanday xunuk qora chiziqlar va buglarsiz moslashadi
   renderArticleMedia(article) {
+    const rawRatio = article.aspectRatio || (article.videoUrl ? '16:9' : '16:9');
+    const ratioClass = `ratio-${rawRatio.replace(':', '-')}`;
+    const posterUrl = article.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80';
+
+    let mediaContent = '';
+
     if (article.videoUrl) {
       const parsed = parseVideoEmbed(article.videoUrl);
 
       // 1. YouTube video
       if (parsed.type === 'youtube') {
-        return `
-          <div class="video-embed-box youtube-box">
-            <iframe
-              src="${parsed.embedUrl}"
-              style="width: 100%; height: 100%; border: none;"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-            ></iframe>
-          </div>
+        mediaContent = `
+          <iframe
+            src="${parsed.embedUrl}"
+            style="width: 100%; height: 100%; border: none;"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
         `;
       }
-
       // 2. Instagram Reels / Post
-      if (parsed.type === 'instagram') {
-        return `
-          <div class="video-embed-box instagram-box">
+      else if (parsed.type === 'instagram') {
+        mediaContent = `
+          <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
             <iframe
               src="${parsed.embedUrl}"
               class="instagram-iframe"
@@ -639,11 +649,10 @@ class AntivirusApp {
           </div>
         `;
       }
-
       // 3. Telegram kanali / posti
-      if (parsed.type === 'telegram') {
-        return `
-          <div class="video-embed-box telegram-box">
+      else if (parsed.type === 'telegram') {
+        mediaContent = `
+          <div style="width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; border-radius: 12px; overflow: hidden;">
             <iframe
               src="${parsed.embedUrl}"
               class="telegram-iframe"
@@ -658,46 +667,48 @@ class AntivirusApp {
           </div>
         `;
       }
-
       // 4. Mahalliy video (IndexedDB xotirasidan o'ynaydi)
-      if (parsed.type === 'local') {
+      else if (parsed.type === 'local') {
         const fileId = article.videoUrl.replace('idb://', '');
         const cachedUrl = mediaDb.getCachedUrl(fileId) || '';
-        return `
-          <div class="video-embed-box" style="aspect-ratio: 16/9; background: #000;">
-            <video
-              id="activeArticleVideoPlayer"
-              src="${cachedUrl}"
-              poster="${article.imageUrl}"
-              controls
-              autoplay
-              playsinline
-              style="width: 100%; height: 100%; object-fit: contain;"
-            ></video>
-          </div>
+        mediaContent = `
+          <video
+            id="activeArticleVideoPlayer"
+            src="${cachedUrl}"
+            poster="${article.imageUrl}"
+            controls
+            autoplay
+            playsinline
+            style="width: 100%; height: 100%;"
+          ></video>
         `;
       }
-
       // 5. To'g'ridan-to'g'ri MP4 / WebM yoki umumiy video
-      if (parsed.type === 'video' || parsed.type === 'generic') {
-        return `
-          <div class="video-embed-box" style="aspect-ratio: 16/9; background: #000;">
-            <video
-              src="${parsed.embedUrl}"
-              poster="${article.imageUrl}"
-              controls
-              autoplay
-              playsinline
-              style="width: 100%; height: 100%; object-fit: contain;"
-            ></video>
-          </div>
+      else {
+        mediaContent = `
+          <video
+            src="${parsed.embedUrl}"
+            poster="${article.imageUrl}"
+            controls
+            autoplay
+            playsinline
+            style="width: 100%; height: 100%;"
+          ></video>
         `;
       }
+    } else {
+      // 6. Rasmli xabar (16:9, 3:4, 1:1, auto formatda xira fon bilan buglarsiz)
+      mediaContent = `
+        <img src="${article.imageUrl}" alt="${article.title}" />
+      `;
     }
 
     return `
-      <div class="article-media-cover">
-        <img src="${article.imageUrl}" alt="${article.title}" />
+      <div class="media-ambient-wrapper ${ratioClass}">
+        <div class="media-ambient-backdrop" style="background-image: url('${posterUrl}');"></div>
+        <div class="media-ambient-content ${ratioClass}">
+          ${mediaContent}
+        </div>
       </div>
     `;
   }
@@ -712,68 +723,88 @@ class AntivirusApp {
     if (!article) return '';
 
     const isSaved = store.getSavedIds().includes(article.id);
+    const layout = article.mediaLayout || 'top';
+
+    const badgesHtml = `
+      <div class="article-badges-row">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span class="hero-tag-badge">${article.categoryName}</span>
+          ${article.source ? `<span class="source-badge">Manba: ${article.source}</span>` : ''}
+          ${article.aspectRatio ? `<span class="source-badge" style="background: rgba(229, 9, 20, 0.12); color: var(--an-red);">📐 ${article.aspectRatio}</span>` : ''}
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span>${Icons.clock} ${article.time} • ${article.date}</span>
+          <span>${Icons.eye} ${article.views.toLocaleString()}</span>
+        </div>
+      </div>
+    `;
+
+    const titleHtml = `<h1 class="article-title-text">${article.title}</h1>`;
+    const leadHtml = article.summary ? `<div class="article-lead-summary">${article.summary}</div>` : '';
+    const mediaHtml = this.renderArticleMedia(article);
+
+    const bodyContentHtml = `
+      <!-- Audio Player (Ovozli eshitish) -->
+      <div class="audio-listening-panel">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700;">
+          <span>🔊</span> <span>Ovozli eshitish</span>
+        </div>
+        <button class="audio-play-pill" id="articleAudioBtn">
+          ${this.isAudioPlaying ? 'To‘xtatish' : 'Tinglash (Play)'}
+        </button>
+      </div>
+
+      <div class="article-paragraphs">${article.content || article.summary}</div>
+
+      ${article.sourceUrl ? `
+        <div style="margin-bottom: 22px; font-size: 12px; color: var(--text-dim); background: var(--bg-pill); padding: 10px 14px; border-radius: 10px;">
+          <span>Asl maqola havolasi:</span>
+          <a href="${article.sourceUrl}" target="_blank" rel="noopener" style="color: var(--an-red); font-weight: 700; margin-left: 6px;">
+            ${article.source || 'Saytga o‘tish'} ↗
+          </a>
+        </div>
+      ` : ''}
+
+      <div class="article-action-tools-row">
+        <div style="display: flex; gap: 8px;">
+          <button class="tool-action-btn ${isSaved ? 'saved' : ''}" id="articleBookmarkBtn">
+            ${Icons.bookmark} <span>${isSaved ? 'Saqlangan' : 'Saqlash'}</span>
+          </button>
+          <button class="tool-action-btn" id="articleShareBtn">
+            ${Icons.share} <span>Ulashish</span>
+          </button>
+        </div>
+
+        <button class="tool-action-btn" id="articleBackBtn">
+          <span>← Orqaga</span>
+        </button>
+      </div>
+    `;
 
     return `
       <div class="article-reader-backdrop open" id="articleBackdrop">
-        <div class="article-reader-modal">
+        <div class="article-reader-modal ${layout === 'cinematic' ? 'layout-cinematic' : ''}">
           <button class="close-modal-round" id="closeReaderBtn">${Icons.close}</button>
 
-          ${this.renderArticleMedia(article)}
-
-          <div class="article-text-body">
-            <div class="article-badges-row">
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span class="hero-tag-badge">${article.categoryName}</span>
-                ${article.source ? `<span class="source-badge">Manba: ${article.source}</span>` : ''}
-              </div>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span>${Icons.clock} ${article.time} • ${article.date}</span>
-                <span>${Icons.eye} ${article.views.toLocaleString()}</span>
-              </div>
+          ${layout === 'text_first' ? `
+            <div class="article-text-body" style="padding-bottom: 12px;">
+              ${badgesHtml}
+              ${titleHtml}
+              ${leadHtml}
             </div>
-
-            <h1 class="article-title-text">${article.title}</h1>
-
-            <!-- Audio Player (Ovozli eshitish) -->
-            <div class="audio-listening-panel">
-              <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700;">
-                <span>🔊</span> <span>Ovozli eshitish</span>
-              </div>
-              <button class="audio-play-pill" id="articleAudioBtn">
-                ${this.isAudioPlaying ? 'To‘xtatish' : 'Tinglash (Play)'}
-              </button>
+            ${mediaHtml}
+            <div class="article-text-body" style="padding-top: 14px;">
+              ${bodyContentHtml}
             </div>
-
-            ${article.summary ? `
-              <div class="article-lead-summary">${article.summary}</div>
-            ` : ''}
-
-            <div class="article-paragraphs">${article.content || article.summary}</div>
-
-            ${article.sourceUrl ? `
-              <div style="margin-bottom: 22px; font-size: 12px; color: var(--text-dim); background: var(--bg-pill); padding: 10px 14px; border-radius: 10px;">
-                <span>Asl maqola havolasi:</span>
-                <a href="${article.sourceUrl}" target="_blank" rel="noopener" style="color: var(--an-red); font-weight: 700; margin-left: 6px;">
-                  ${article.source || 'Saytga o‘tish'} ↗
-                </a>
-              </div>
-            ` : ''}
-
-            <div class="article-action-tools-row">
-              <div style="display: flex; gap: 8px;">
-                <button class="tool-action-btn ${isSaved ? 'saved' : ''}" id="articleBookmarkBtn">
-                  ${Icons.bookmark} <span>${isSaved ? 'Saqlangan' : 'Saqlash'}</span>
-                </button>
-                <button class="tool-action-btn" id="articleShareBtn">
-                  ${Icons.share} <span>Ulashish</span>
-                </button>
-              </div>
-
-              <button class="tool-action-btn" id="articleBackBtn">
-                <span>← Orqaga</span>
-              </button>
+          ` : `
+            ${mediaHtml}
+            <div class="article-text-body">
+              ${badgesHtml}
+              ${titleHtml}
+              ${leadHtml}
+              ${bodyContentHtml}
             </div>
-          </div>
+          `}
         </div>
       </div>
     `;
@@ -960,6 +991,25 @@ class AntivirusApp {
               </div>
 
               <div class="form-group">
+                <label class="form-label">Rasm Formati (3 ga 4, 16 ga 9, Kvadrat)</label>
+                <div class="ratio-selector-bar">
+                  <button type="button" class="ratio-pill-btn ${this.selectedNewsRatio === '16:9' ? 'active' : ''}" data-news-ratio="16:9">🖥️ 16:9 (Keng)</button>
+                  <button type="button" class="ratio-pill-btn ${this.selectedNewsRatio === '3:4' ? 'active' : ''}" data-news-ratio="3:4">📷 3:4 (Portret / 3 ga 4)</button>
+                  <button type="button" class="ratio-pill-btn ${this.selectedNewsRatio === '1:1' ? 'active' : ''}" data-news-ratio="1:1">⏹️ 1:1 (Kvadrat)</button>
+                  <button type="button" class="ratio-pill-btn ${this.selectedNewsRatio === 'auto' ? 'active' : ''}" data-news-ratio="auto">⚡ Avto</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Joylashuv Tartibi</label>
+                <div class="layout-selector-bar">
+                  <button type="button" class="layout-pill-btn ${this.selectedNewsLayout === 'top' ? 'active' : ''}" data-news-layout="top">Tepada (Klassik)</button>
+                  <button type="button" class="layout-pill-btn ${this.selectedNewsLayout === 'cinematic' ? 'active' : ''}" data-news-layout="cinematic">Kinematik Fon</button>
+                  <button type="button" class="layout-pill-btn ${this.selectedNewsLayout === 'text_first' ? 'active' : ''}" data-news-layout="text_first">Avval Sarlavha</button>
+                </div>
+              </div>
+
+              <div class="form-group">
                 <label class="form-label">Qisqacha Tavsif (Lead)</label>
                 <textarea id="cfNewsSummary" class="form-textarea" placeholder="Yangilikning qisqa mazmuni..."></textarea>
               </div>
@@ -1101,6 +1151,30 @@ class AntivirusApp {
                   </div>
                 </div>
               `}
+
+              <!-- FORMAT TANLOVI: 3:4, 16:9, 9:16 -->
+              <div class="form-group">
+                <label class="form-label">Video Formati (3 ga 4, 16 ga 9, 9 ga 16)</label>
+                <div class="ratio-selector-bar">
+                  <button type="button" class="ratio-pill-btn ${this.selectedVideoRatio === '16:9' ? 'active' : ''}" data-video-ratio="16:9">🖥️ 16:9 (Gorizontal / YouTube)</button>
+                  <button type="button" class="ratio-pill-btn ${this.selectedVideoRatio === '3:4' ? 'active' : ''}" data-video-ratio="3:4">📷 3:4 (Portret / Mobil)</button>
+                  <button type="button" class="ratio-pill-btn ${this.selectedVideoRatio === '9:16' ? 'active' : ''}" data-video-ratio="9:16">📱 9:16 (Shorts / Reels)</button>
+                  <button type="button" class="ratio-pill-btn ${this.selectedVideoRatio === '1:1' ? 'active' : ''}" data-video-ratio="1:1">⏹️ 1:1 (Kvadrat)</button>
+                </div>
+                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">
+                  💡 Xira fon (Ambient) orqali video har qanday ekranda qora chiziqlarsiz va buglarsiz moslashadi!
+                </div>
+              </div>
+
+              <!-- JOYLAHUV TARTIBI -->
+              <div class="form-group">
+                <label class="form-label">Joylashuv Tartibi</label>
+                <div class="layout-selector-bar">
+                  <button type="button" class="layout-pill-btn ${this.selectedVideoLayout === 'top' ? 'active' : ''}" data-video-layout="top">Tepada (Klassik)</button>
+                  <button type="button" class="layout-pill-btn ${this.selectedVideoLayout === 'cinematic' ? 'active' : ''}" data-video-layout="cinematic">Kinematik Fon</button>
+                  <button type="button" class="layout-pill-btn ${this.selectedVideoLayout === 'text_first' ? 'active' : ''}" data-video-layout="text_first">Avval Sarlavha</button>
+                </div>
+              </div>
 
               <div class="form-group">
                 <label class="form-label">Qisqacha Tavsif / Mazmuni</label>
@@ -1270,7 +1344,9 @@ class AntivirusApp {
         summary: summary || title,
         content: content || summary || title,
         isHero,
-        isTrending
+        isTrending,
+        aspectRatio: this.selectedNewsRatio || '16:9',
+        mediaLayout: this.selectedNewsLayout || 'top'
       });
 
       this.pendingNewsImageUrl = '';
@@ -1288,16 +1364,40 @@ class AntivirusApp {
       if (file) {
         try {
           this.showToast('⏳ Rasm qayta ishlanmoqda...');
-          const dataUrl = await processImageFile(file, 1200, 0.85);
+          const res = await processImageFile(file, 1200, 0.85);
+          const dataUrl = typeof res === 'string' ? res : res.dataUrl;
           this.pendingNewsImageUrl = dataUrl;
+          if (res.suggestedRatio) {
+            this.selectedNewsRatio = res.suggestedRatio;
+          }
           const input = document.getElementById('cfNewsImageUrl');
           if (input) input.value = dataUrl;
-          this.showToast('🖼️ Rasm muvaffaqiyatli tanlandi!');
+          this.showToast('🖼️ Rasm tanlandi va formati moslashtirildi!');
           this.render();
         } catch (err) {
           alert('Rasm yuklashda xatolik: ' + err.message);
         }
       }
+    });
+
+    // 9a-3. Rasmli xabar formati (16:9, 3:4, 1:1, auto) va joylashuv tartibini tanlash
+    document.querySelectorAll('[data-news-ratio]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const ratio = e.currentTarget.getAttribute('data-news-ratio');
+        if (ratio) {
+          this.selectedNewsRatio = ratio;
+          this.render();
+        }
+      });
+    });
+    document.querySelectorAll('[data-news-layout]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const layout = e.currentTarget.getAttribute('data-news-layout');
+        if (layout) {
+          this.selectedNewsLayout = layout;
+          this.render();
+        }
+      });
     });
 
     // 9b-1. Video rejimini o'zgartirish (Havola orqali vs Qurilmadan fayl)
@@ -1306,6 +1406,26 @@ class AntivirusApp {
         const mode = e.currentTarget.getAttribute('data-video-mode');
         if (mode && mode !== this.videoUploadMode) {
           this.videoUploadMode = mode;
+          this.render();
+        }
+      });
+    });
+
+    // 9b-1b. Video formati (16:9, 3:4, 9:16, 1:1) va joylashuv tartibini tanlash
+    document.querySelectorAll('[data-video-ratio]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const ratio = e.currentTarget.getAttribute('data-video-ratio');
+        if (ratio) {
+          this.selectedVideoRatio = ratio;
+          this.render();
+        }
+      });
+    });
+    document.querySelectorAll('[data-video-layout]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const layout = e.currentTarget.getAttribute('data-video-layout');
+        if (layout) {
+          this.selectedVideoLayout = layout;
           this.render();
         }
       });
@@ -1325,30 +1445,35 @@ class AntivirusApp {
           if (sourceInput) sourceInput.value = 'YouTube';
           if (coverInput) coverInput.value = 'https://img.youtube.com/vi/5qap5aO4i9A/hqdefault.jpg';
           if (titleInput && !titleInput.value) titleInput.value = 'Lofi Hip Hop Radio — Jonli Efir';
+          this.selectedVideoRatio = '16:9';
         } else if (type === 'ig') {
           if (urlInput) urlInput.value = 'https://www.instagram.com/reel/C3_sampleReel/';
           if (sourceInput) sourceInput.value = 'Instagram Reels';
           if (coverInput) coverInput.value = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80';
           if (titleInput && !titleInput.value) titleInput.value = 'Instagram Reels: Texnologiya yangiliklari';
+          this.selectedVideoRatio = '9:16';
         } else if (type === 'tg') {
           if (urlInput) urlInput.value = 'https://t.me/kunuzofficial/145829';
           if (sourceInput) sourceInput.value = 'Telegram (@kunuzofficial)';
           if (coverInput) coverInput.value = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80';
           if (titleInput && !titleInput.value) titleInput.value = 'Telegram xabari: Kun yangiliklari reportaji';
+          this.selectedVideoRatio = '3:4';
         } else if (type === 'mp4') {
           if (urlInput) urlInput.value = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
           if (sourceInput) sourceInput.value = 'Google Video Server';
           if (coverInput) coverInput.value = 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=1200&q=80';
           if (titleInput && !titleInput.value) titleInput.value = 'Yuqori Sifatli MP4 Video Reportaj';
+          this.selectedVideoRatio = '16:9';
         }
 
         if (urlInput) {
           urlInput.dispatchEvent(new Event('input'));
         }
+        this.render();
       });
     });
 
-    // 9b-3. Video URL jonli tahlil qilish (Avtomatik manba va muqova aniqlash)
+    // 9b-3. Video URL jonli tahlil qilish (Avtomatik manba, muqova va proportsiya aniqlash)
     const videoUrlEl = document.getElementById('cfVideoUrl');
     videoUrlEl?.addEventListener('input', (e) => {
       const val = e.target.value.trim();
@@ -1364,20 +1489,24 @@ class AntivirusApp {
       const parsed = parseVideoEmbed(val);
       if (parsed) {
         if (parsed.type === 'youtube') {
-          if (statusEl) statusEl.innerHTML = '<span style="color: #EF4444; font-weight: 700;">🔴 YouTube video aniqlandi • HD Muqova va pleyer tayyorlandi!</span>';
+          const isShort = val.includes('/shorts/');
+          if (statusEl) statusEl.innerHTML = `<span style="color: #EF4444; font-weight: 700;">🔴 YouTube ${isShort ? 'Shorts (Vertikal)' : 'Video (16:9)'} aniqlandi • Pleyer tayyorlandi!</span>`;
           if (sourceInput && (!sourceInput.value || sourceInput.value === 'YouTube')) sourceInput.value = 'YouTube';
           if (coverInput && (!coverInput.value || coverInput.value.includes('img.youtube.com'))) {
             coverInput.value = parsed.thumbnailUrl;
             this.pendingVideoThumbnail = parsed.thumbnailUrl;
           }
+          this.selectedVideoRatio = isShort ? '9:16' : '16:9';
         } else if (parsed.type === 'instagram') {
-          if (statusEl) statusEl.innerHTML = '<span style="color: #E1306C; font-weight: 700;">🟣 Instagram Reels / Post aniqlandi • Pleyer sozlandi!</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color: #E1306C; font-weight: 700;">🟣 Instagram Reels / Post aniqlandi • 9:16 Vertikal pleyer sozlandi!</span>';
           if (sourceInput) sourceInput.value = 'Instagram';
           if (coverInput && !coverInput.value) coverInput.value = parsed.thumbnailUrl;
+          this.selectedVideoRatio = '9:16';
         } else if (parsed.type === 'telegram') {
-          if (statusEl) statusEl.innerHTML = '<span style="color: #0088CC; font-weight: 700;">🔵 Telegram posti aniqlandi • Rasmiy vidjet tayyorlandi!</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color: #0088CC; font-weight: 700;">🔵 Telegram posti aniqlandi • 3:4 Mobil vidjet tayyorlandi!</span>';
           if (sourceInput) sourceInput.value = parsed.source;
           if (coverInput && !coverInput.value) coverInput.value = parsed.thumbnailUrl;
+          this.selectedVideoRatio = '3:4';
         } else if (parsed.type === 'video') {
           if (statusEl) statusEl.innerHTML = '<span style="color: #22C55E; font-weight: 700;">🟢 Sayt video fayli (MP4/WebM) aniqlandi • HTML5 pleyer tayyor!</span>';
           if (sourceInput) sourceInput.value = parsed.source;
@@ -1418,12 +1547,15 @@ class AntivirusApp {
     });
 
     const handleVideoFileSelect = async (file) => {
-      this.showToast('⏳ Video fayl tahlil qilinmoqda (muqova va davomiylik)...');
+      this.showToast('⏳ Video fayl tahlil qilinmoqda (muqova va proportsiya)...');
       try {
         const meta = await captureVideoMetadata(file);
         this.pendingVideoFile = file;
         this.pendingVideoThumbnail = meta.thumbnailUrl;
         this.pendingVideoDuration = meta.durationFormatted || '01:30';
+        if (meta.suggestedRatio) {
+          this.selectedVideoRatio = meta.suggestedRatio;
+        }
 
         const titleInput = document.getElementById('cfVideoTitle');
         if (titleInput && !titleInput.value) {
@@ -1433,7 +1565,7 @@ class AntivirusApp {
         const durationInput = document.getElementById('cfVideoDuration');
         if (durationInput) durationInput.value = this.pendingVideoDuration;
 
-        this.showToast('✨ Video qabul qilindi! Kadr muqovasi va davomiylik avtomatik olindi.');
+        this.showToast(`✨ Video qabul qilindi! O‘lchami: ${meta.suggestedRatio || '16:9'} aniqlandi.`);
         this.render();
       } catch (err) {
         alert('Video tahlilida xatolik: ' + err.message);
@@ -1462,7 +1594,8 @@ class AntivirusApp {
       if (file) {
         try {
           this.showToast('⏳ Muqova rasmi siqilmoqda...');
-          const dataUrl = await processImageFile(file, 1200, 0.85);
+          const res = await processImageFile(file, 1200, 0.85);
+          const dataUrl = typeof res === 'string' ? res : res.dataUrl;
           this.pendingVideoThumbnail = dataUrl;
           const coverInput = document.getElementById('cfVideoImageUrl');
           if (coverInput) coverInput.value = dataUrl;
@@ -1538,6 +1671,8 @@ class AntivirusApp {
         content: summary || title,
         isHero,
         isTrending,
+        aspectRatio: this.selectedVideoRatio || '16:9',
+        mediaLayout: this.selectedVideoLayout || 'top',
         tags: ['Video', source]
       });
 
