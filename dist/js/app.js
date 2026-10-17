@@ -1,30 +1,28 @@
-// ANTIVIRUS NEWS — Professional Responsive Platform & Mobile App
+// ANTIVIRUS NEWS — Siyraklashtirilgan, Aniq va Tezkor Ilova Mantig'i
 import { store } from './store.js';
 import { Icons, getCategoryIcon } from './icons.js';
-import { INITIAL_CURRENCIES } from './data.js';
 
-class AntivirusPlatform {
+class AntivirusApp {
   constructor() {
-    this.currentMobileTab = 'home'; // 'home' | 'trend' | 'video' | 'menu'
+    this.currentTab = 'home'; // 'home' | 'trend' | 'video' | 'menu'
     this.selectedCategory = 'all';
     this.searchQuery = '';
     this.activeArticleId = null;
-    this.isSpeechPlaying = false;
     this.speechSynth = window.speechSynthesis;
-    this.isQuickAddOpen = false;
+    this.isAudioPlaying = false;
 
     this.init();
   }
 
   init() {
-    // Theme
-    const savedTheme = store.getTheme();
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    // Mavzuni o'rnatish
+    const theme = store.getTheme();
+    document.documentElement.setAttribute('data-theme', theme);
 
-    // Subscribe to store updates
+    // Reaktiv store yangilanishlarini tinglash
     store.subscribe(() => this.render());
 
-    // Window events
+    // Escape tugmasi bosilganda maqolani yopish
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeArticle();
     });
@@ -33,20 +31,20 @@ class AntivirusPlatform {
   }
 
   toggleTheme() {
-    const nextTheme = store.toggleTheme();
-    this.showToast(nextTheme === 'dark' ? '🌙 Dark Mode yoqildi' : '☀️ Light Mode yoqildi');
+    const next = store.toggleTheme();
+    this.showToast(next === 'dark' ? '🌙 Dark Mode yoqildi' : '☀️ Light Mode yoqildi');
   }
 
   setCategory(catId) {
     this.selectedCategory = catId;
-    if (this.currentMobileTab === 'menu') {
-      this.currentMobileTab = 'home';
+    if (this.currentTab === 'menu') {
+      this.currentTab = 'home';
     }
     this.render();
   }
 
-  setMobileTab(tab) {
-    this.currentMobileTab = tab;
+  setTab(tab) {
+    this.currentTab = tab;
     this.activeArticleId = null;
     this.render();
   }
@@ -60,7 +58,7 @@ class AntivirusPlatform {
   closeArticle() {
     this.activeArticleId = null;
     if (this.speechSynth) this.speechSynth.cancel();
-    this.isSpeechPlaying = false;
+    this.isAudioPlaying = false;
     this.render();
   }
 
@@ -70,9 +68,9 @@ class AntivirusPlatform {
       return;
     }
 
-    if (this.isSpeechPlaying) {
+    if (this.isAudioPlaying) {
       this.speechSynth.cancel();
-      this.isSpeechPlaying = false;
+      this.isAudioPlaying = false;
       this.showToast('Ovozli o‘qish to‘xtatildi');
       this.render();
     } else {
@@ -80,11 +78,11 @@ class AntivirusPlatform {
       utter.lang = 'uz-UZ';
       utter.rate = 1.0;
       utter.onend = () => {
-        this.isSpeechPlaying = false;
+        this.isAudioPlaying = false;
         this.render();
       };
       this.speechSynth.speak(utter);
-      this.isSpeechPlaying = true;
+      this.isAudioPlaying = true;
       this.showToast('🔊 Maqola ovozli o‘qilmoqda...');
       this.render();
     }
@@ -99,205 +97,110 @@ class AntivirusPlatform {
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(`${article.title}\n\nANTIVIRUS NEWS: ${window.location.href}`);
-      this.showToast('Havola buferga nusxalandi!');
+      this.showToast('Havola nusxalandi!');
     }
   }
 
   showToast(message) {
-    const existing = document.querySelector('.toast-notice-box');
+    const existing = document.querySelector('.clean-toast-badge');
     if (existing) existing.remove();
 
     const toast = document.createElement('div');
-    toast.className = 'toast-notice-box';
+    toast.className = 'clean-toast-badge';
     toast.innerHTML = `<span style="color: var(--an-red);">${Icons.shield}</span><span>${message}</span>`;
     document.body.appendChild(toast);
 
     setTimeout(() => {
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 250);
-    }, 2500);
+    }, 2200);
   }
 
   // -------------------------------------------------------------
-  // ASOSIY RENDER LOGIKASI
+  // ASOSIY RENDER QILISH
   // -------------------------------------------------------------
   render() {
     const root = document.getElementById('app');
     if (!root) return;
 
     const theme = store.getTheme();
-    const newsList = store.getNews();
     const categories = store.getCategories();
 
     root.innerHTML = `
-      <div class="antivirus-root-layout" data-theme="${theme}">
-        <!-- 1. DESKTOP TOP META BAR (Valyutalar, soat, ob-havo) -->
-        ${this.renderDesktopTopBar()}
+      <div class="app-container" data-theme="${theme}">
+        <!-- 1. Header (Logotip, Qidiruv, Rejim) -->
+        <header class="site-header">
+          <div class="brand-identity" data-tab-link="home">
+            <span class="brand-an-badge">AN</span>
+            <div class="brand-texts">
+              <span class="brand-title">ANTIVIRUS</span>
+              <span class="brand-sub">NEWS</span>
+            </div>
+          </div>
 
-        <!-- 2. DESKTOP MAIN HEADER -->
-        ${this.renderDesktopHeader()}
+          <div class="header-controls">
+            <button class="icon-btn" id="themeSwitchBtn" title="Rejimni almashtirish">
+              ${theme === 'dark' ? Icons.sun : Icons.moon}
+            </button>
+            <button class="icon-btn" id="searchTriggerBtn" title="Qidiruv">
+              ${Icons.search}
+            </button>
+            <button class="icon-btn" id="notifBellBtn" title="Bildirishnomalar">
+              ${Icons.bell}
+            </button>
+          </div>
+        </header>
 
-        <!-- 3. MOBIL APP HEADER (Faqat telefonda ko'rinadi) -->
-        ${this.renderMobileHeader(theme)}
+        <!-- 2. Gorizontal Toifalar (Swipeable Tabs) -->
+        ${this.currentTab !== 'menu' ? this.renderCategoryTabs(categories) : ''}
 
-        <!-- 4. MOBIL GORIZONTAL TOIFALAR (Faqat telefonda ko'rinadi) -->
-        ${this.currentMobileTab !== 'menu' ? this.renderMobileTabsBar(categories) : ''}
+        <!-- 3. Asosiy Tana (Body) -->
+        <main class="main-view-body">
+          ${this.renderActiveTabContent()}
+        </main>
 
-        <!-- 5. ASOSIY KONTENT HUDUDI (Responsive) -->
-        <div class="main-layout-container">
-          ${this.renderMainContent(newsList, categories)}
-        </div>
+        <!-- 4. Pastki Navigatsiya Bar (Bottom Bar) -->
+        <nav class="bottom-navigation-bar">
+          <div class="nav-bottom-item ${this.currentTab === 'home' ? 'active' : ''}" data-tab-link="home">
+            <span>${Icons.home}</span>
+            <span class="nav-bottom-label">Asosiy</span>
+          </div>
 
-        <!-- 6. DESKTOP FOOTER (Faqat kompyuterda ko'rinadi) -->
-        ${this.renderDesktopFooter(categories)}
+          <div class="nav-bottom-item ${this.currentTab === 'trend' ? 'active' : ''}" data-tab-link="trend">
+            <span>${Icons.trendingUp}</span>
+            <span class="nav-bottom-label">Trend</span>
+          </div>
 
-        <!-- 7. MOBIL PASTKI BAR (Bottom Navigation — faqat telefonda) -->
-        ${this.renderMobileBottomBar()}
+          <!-- MARKAZIY 3D QIZIL "AN" FLOATING TUGMASI -->
+          <div class="center-floating-an" id="centerAnCircleBtn" title="Bosh sahifa">
+            <div class="center-an-sphere">AN</div>
+          </div>
 
-        <!-- 8. ALOHIDA MAQOLA MODALI / SAHIFASI -->
+          <div class="nav-bottom-item ${this.currentTab === 'video' ? 'active' : ''}" data-tab-link="video">
+            <span>${Icons.playCircle}</span>
+            <span class="nav-bottom-label">Video</span>
+          </div>
+
+          <div class="nav-bottom-item ${this.currentTab === 'menu' ? 'active' : ''}" data-tab-link="menu">
+            <span>${Icons.menu}</span>
+            <span class="nav-bottom-label">Barchasi</span>
+          </div>
+        </nav>
+
+        <!-- 5. Maqola O'qish Oynasi (Modal) -->
         ${this.renderArticleModal()}
-
-        <!-- 9. TEZKOR YANGILIK QO'SHISH MODALI (ADMIN) -->
-        ${this.renderQuickAddModal(categories)}
       </div>
     `;
 
     this.bindEvents();
   }
 
-  // 1. Desktop Top Meta Bar
-  renderDesktopTopBar() {
-    const now = new Date();
-    const dateStr = `${now.getDate()}-oktyabr, ${now.getFullYear()}-yil`;
-
+  // Gorizontal toifalar tasmasi
+  renderCategoryTabs(categories) {
     return `
-      <div class="top-meta-bar">
-        <div class="top-meta-inner">
-          <div class="meta-currencies">
-            <span style="color: #64748B;">Markaziy Bank:</span>
-            ${INITIAL_CURRENCIES.map(c => `
-              <span class="meta-cur-item">
-                <b>${c.code}</b> ${c.rate} 
-                <small class="${c.isUp ? 'cur-up' : 'cur-down'}">${c.diff}</small>
-              </span>
-            `).join('')}
-          </div>
-
-          <div class="meta-right-tools">
-            <span class="weather-badge">📍 Toshkent: ☀️ +24°C</span>
-            <span>📅 ${dateStr}</span>
-            <span style="color: var(--an-red); font-weight: 700;">LIVE • 24/7</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  // 2. Desktop Main Header & Nav
-  renderDesktopHeader() {
-    const theme = store.getTheme();
-    const categories = store.getCategories();
-    const newsList = store.getNews();
-
-    return `
-      <header class="desktop-main-header">
-        <div class="header-container">
-          <!-- AN Brend Logotipi -->
-          <div class="brand-logo-wrap" data-nav-tab="home">
-            <div class="brand-symbol-an">AN</div>
-            <div class="brand-text-col">
-              <span class="brand-title-an">ANTIVIRUS</span>
-              <span class="brand-slogan-an">NEWS • GLOBAL MEDIA</span>
-            </div>
-          </div>
-
-          <!-- Qidiruv Qatori -->
-          <div class="header-search-bar">
-            <span class="search-field-icon">${Icons.search}</span>
-            <input type="text" class="search-input-field" id="desktopSearchInput" placeholder="Yangiliklarni qidirish..." value="${this.searchQuery}" />
-          </div>
-
-          <!-- O'ng Amallar -->
-          <div class="header-actions-group">
-            <button class="btn-header-round" id="desktopThemeBtn" title="Rejimni almashtirish">
-              ${theme === 'dark' ? Icons.sun : Icons.moon}
-            </button>
-            <button class="btn-header-round" id="desktopBellBtn" title="Bildirishnomalar">
-              ${Icons.bell}
-              <span class="notif-badge-ping"></span>
-            </button>
-            <button class="btn-quick-create" id="desktopAddNewsBtn">
-              ${Icons.plus} Yangilik Qo‘shish
-            </button>
-          </div>
-        </div>
-
-        <!-- Desktop Gorizontal Navigatsiya Menyusi -->
-        <nav class="desktop-nav-wrap">
-          <div class="desktop-nav-inner">
-            ${categories.map(c => `
-              <button class="nav-item-btn ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-id="${c.id}">
-                ${c.name}
-              </button>
-            `).join('')}
-          </div>
-        </nav>
-
-        <!-- Breaking News Ticker -->
-        <div class="breaking-ticker-row">
-          <div class="ticker-title-badge">
-            ${Icons.trendingUp} TEZKOR XABARLAR
-          </div>
-          <div class="ticker-marquee-box">
-            ${newsList.slice(0, 5).map(n => `
-              <div class="ticker-link-entry" data-article-click="${n.id}">
-                <span style="color: var(--an-red); font-weight: 800;">${n.time}</span>
-                <span>${n.title}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </header>
-    `;
-  }
-
-  // 3. Mobil Header (Telefonda ko'rinadi)
-  renderMobileHeader(theme) {
-    return `
-      <header class="mobile-app-header">
-        <div class="brand-badge-group" data-nav-tab="home">
-          <span class="mobile-brand-an">AN</span>
-          <div class="mobile-brand-names">
-            <span class="mobile-name-main">ANTIVIRUS</span>
-            <span class="mobile-name-sub">NEWS</span>
-          </div>
-        </div>
-
-        <div class="mobile-header-tools">
-          <button class="btn-header-round" id="mobileThemeBtn" title="Rejim">
-            ${theme === 'dark' ? Icons.sun : Icons.moon}
-          </button>
-          <button class="btn-header-round" id="mobileSearchBtn" title="Qidiruv">
-            ${Icons.search}
-          </button>
-          <button class="btn-header-round" id="mobileBellBtn" title="Bildirishnomalar">
-            ${Icons.bell}
-            <span class="notif-badge-ping"></span>
-          </button>
-          <button class="btn-header-round" id="mobileAddBtn" title="Qo‘shish" style="color: var(--an-red);">
-            ${Icons.plus}
-          </button>
-        </div>
-      </header>
-    `;
-  }
-
-  // 4. Mobil Gorizontal Toifalar (Scrollable Tabs)
-  renderMobileTabsBar(categories) {
-    return `
-      <nav class="mobile-category-tabs-bar">
+      <nav class="category-tabs-bar">
         ${categories.slice(0, 7).map(c => `
-          <div class="mobile-tab-pill ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-id="${c.id}">
+          <div class="cat-tab-item ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-select="${c.id}">
             ${c.name}
           </div>
         `).join('')}
@@ -305,316 +208,254 @@ class AntivirusPlatform {
     `;
   }
 
-  // 5. Asosiy Kontent (Bosh sahifa, Menu, Trend yoki Video)
-  renderMainContent(newsList, categories) {
-    // Agar "Barchasi" Menyusi tanlangan bo'lsa (Aynan skrinshotdagi 2-ekran!)
-    if (this.currentMobileTab === 'menu') {
-      return this.renderMenuScreen(categories);
+  // Joriy tab mazmuni
+  renderActiveTabContent() {
+    if (this.currentTab === 'menu') {
+      return this.renderMenuView();
+    } else if (this.currentTab === 'trend') {
+      return this.renderTrendView();
+    } else if (this.currentTab === 'video') {
+      return this.renderVideoView();
+    } else {
+      return this.renderHomeView();
     }
+  }
 
-    // Filtrlangan yangiliklar
-    let filteredList = newsList;
+  // -------------------------------------------------------------
+  // TAB 1: BOSH SAHIFA
+  // -------------------------------------------------------------
+  renderHomeView() {
+    const newsList = store.getNews();
+
+    let list = newsList;
     if (this.selectedCategory !== 'all') {
-      filteredList = filteredList.filter(n => n.category === this.selectedCategory);
+      list = list.filter(n => n.category === this.selectedCategory);
     }
     if (this.searchQuery) {
-      filteredList = filteredList.filter(n =>
+      list = list.filter(n =>
         n.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         n.summary.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     }
 
-    const heroItem = filteredList.find(n => n.isHero) || filteredList[0];
-    const sideItems = newsList.filter(n => n.id !== heroItem?.id).slice(0, 4);
+    const heroNews = list.find(n => n.isHero) || list[0];
+    const streamNews = list.filter(n => n.id !== heroNews?.id);
 
     return `
-      <!-- Mobil 6 ta Tezkor Toifa Kvadratlari (Skrinshotdagi kabi) -->
-      <div class="mobile-quick-cat-grid">
-        <div class="mobile-quick-cat-btn ${this.selectedCategory === 'siyosat' ? 'active-pill' : ''}" data-cat-id="siyosat">
-          <div class="mobile-quick-cat-icon" style="color: #E50914;">${Icons.landmark}</div>
-          <span class="mobile-quick-cat-label">Siyosat</span>
-        </div>
-        <div class="mobile-quick-cat-btn ${this.selectedCategory === 'dunyo' ? 'active-pill' : ''}" data-cat-id="dunyo">
-          <div class="mobile-quick-cat-icon" style="color: #2563EB;">${Icons.globe}</div>
-          <span class="mobile-quick-cat-label">Dunyo</span>
-        </div>
-        <div class="mobile-quick-cat-btn ${this.selectedCategory === 'jamiyat' ? 'active-pill' : ''}" data-cat-id="jamiyat">
-          <div class="mobile-quick-cat-icon" style="color: #DC2626;">${Icons.users}</div>
-          <span class="mobile-quick-cat-label">Jamiyat</span>
-        </div>
-        <div class="mobile-quick-cat-btn ${this.selectedCategory === 'biznes' ? 'active-pill' : ''}" data-cat-id="biznes">
-          <div class="mobile-quick-cat-icon" style="color: #EA580C;">${Icons.barChart}</div>
-          <span class="mobile-quick-cat-label">Biznes</span>
-        </div>
-        <div class="mobile-quick-cat-btn ${this.selectedCategory === 'sport' ? 'active-pill' : ''}" data-cat-id="sport">
-          <div class="mobile-quick-cat-icon" style="color: #16A34A;">${Icons.trophy}</div>
-          <span class="mobile-quick-cat-label">Sport</span>
-        </div>
-        <div class="mobile-quick-cat-btn" data-nav-tab="menu">
-          <div class="mobile-quick-cat-icon" style="color: #94A3B8;">${Icons.grid}</div>
-          <span class="mobile-quick-cat-label">Barchasi</span>
-        </div>
-      </div>
-
-      <!-- KATTA HERO SLIDER BO'LIMI (Desktopda 2 ustun, Telefonda 1 ustun) -->
-      ${heroItem ? `
-        <section class="desktop-hero-grid">
-          <!-- Katta Slayder Kartasi (Mirziyoyev & Berdimuhamedov) -->
-          <div class="hero-feature-card" data-article-click="${heroItem.id}">
-            <img class="hero-feature-img" src="${heroItem.imageUrl}" alt="${heroItem.title}" />
-            <div class="hero-feature-gradient"></div>
-            <div class="hero-feature-content">
-              <span class="category-tag-pill">${heroItem.categoryName}</span>
-              <h2 class="hero-feature-title">${heroItem.title}</h2>
-              <p class="hero-feature-summary">${heroItem.summary}</p>
-              <div class="hero-meta-row">
-                <span class="hero-meta-item">${Icons.clock} ${heroItem.time}</span>
-                <span class="hero-meta-item">${Icons.calendar} ${heroItem.date}</span>
-                <span class="hero-meta-item">${Icons.eye} ${heroItem.views.toLocaleString()}</span>
-                <div class="hero-dots-wrap">
-                  <span class="dot-pill-wide"></span>
-                  <span class="dot-circle-small"></span>
-                  <span class="dot-circle-small"></span>
-                  <span class="dot-circle-small"></span>
-                </div>
+      <!-- 1. Katta Hero Slayder Kartasi (Rasmdagi Mirziyoyev & Berdimuhamedov xabari) -->
+      ${heroNews ? `
+        <div class="hero-card-banner" data-open-id="${heroNews.id}">
+          <img class="hero-card-img" src="${heroNews.imageUrl}" alt="${heroNews.title}" />
+          <div class="hero-card-gradient"></div>
+          <div class="hero-card-info">
+            <span class="hero-tag-badge">${heroNews.categoryName}</span>
+            <h3 class="hero-card-title">${heroNews.title}</h3>
+            <div class="hero-card-meta">
+              <div class="hero-meta-left">
+                <span>${Icons.clock} ${heroNews.time}</span>
+                <span>${Icons.calendar} ${heroNews.date}</span>
+                <span>${Icons.eye} ${heroNews.views.toLocaleString()}</span>
+              </div>
+              <div class="hero-dots-row">
+                <span class="hero-dot-active"></span>
+                <span class="hero-dot-normal"></span>
+                <span class="hero-dot-normal"></span>
+                <span class="hero-dot-normal"></span>
               </div>
             </div>
           </div>
-
-          <!-- Yon Ustun: So'nggi yangiliklar (Desktopda ko'rinadi) -->
-          <div class="hero-side-column">
-            <div class="side-col-head">
-              <span class="side-col-title"><span class="side-red-dot"></span> So‘nggi yangiliklar</span>
-              <a href="#" class="view-all-link" style="color: var(--an-red); font-size: 12px; font-weight: 700;" data-cat-id="all">Barchasi →</a>
-            </div>
-            <div class="side-news-stack">
-              ${sideItems.map(n => `
-                <div class="side-news-card" data-article-click="${n.id}">
-                  <img class="side-news-thumb" src="${n.imageUrl}" alt="${n.title}" />
-                  <div class="side-news-body">
-                    <h4 class="side-news-title">${n.title}</h4>
-                    <div class="side-news-meta">
-                      <span>${Icons.clock} ${n.time}</span>
-                      <span>${Icons.eye} ${n.views.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </section>
+        </div>
       ` : ''}
 
-      <!-- ASOSIY YANGILIKLAR RO'YXATI (Desktopda 4 ustun, Telefonda 1 ustunli ro'yxat) -->
-      <div class="section-header-row">
-        <h3 class="section-title-big">
-          ${this.searchQuery ? `Qidiruv natijalari: "${this.searchQuery}"` : (this.selectedCategory === 'all' ? 'So‘nggi yangiliklar' : store.getCategoryName(this.selectedCategory))}
-        </h3>
-        <span style="font-size: 13px; color: var(--an-red); font-weight: 700; cursor: pointer;" data-nav-tab="menu">Barchasi →</span>
+      <!-- 2. 6 ta Tezkor Toifa Tugmalari (Siyosat, Dunyo, Jamiyat, Biznes, Sport, Barchasi) -->
+      <div class="quick-categories-grid">
+        <div class="quick-cat-box ${this.selectedCategory === 'siyosat' ? 'active' : ''}" data-cat-select="siyosat">
+          <div class="quick-cat-icon" style="color: #E50914;">${Icons.landmark}</div>
+          <span class="quick-cat-label">Siyosat</span>
+        </div>
+        <div class="quick-cat-box ${this.selectedCategory === 'dunyo' ? 'active' : ''}" data-cat-select="dunyo">
+          <div class="quick-cat-icon" style="color: #2563EB;">${Icons.globe}</div>
+          <span class="quick-cat-label">Dunyo</span>
+        </div>
+        <div class="quick-cat-box ${this.selectedCategory === 'jamiyat' ? 'active' : ''}" data-cat-select="jamiyat">
+          <div class="quick-cat-icon" style="color: #DC2626;">${Icons.users}</div>
+          <span class="quick-cat-label">Jamiyat</span>
+        </div>
+        <div class="quick-cat-box ${this.selectedCategory === 'biznes' ? 'active' : ''}" data-cat-select="biznes">
+          <div class="quick-cat-icon" style="color: #EA580C;">${Icons.barChart}</div>
+          <span class="quick-cat-label">Biznes</span>
+        </div>
+        <div class="quick-cat-box ${this.selectedCategory === 'sport' ? 'active' : ''}" data-cat-select="sport">
+          <div class="quick-cat-icon" style="color: #16A34A;">${Icons.trophy}</div>
+          <span class="quick-cat-label">Sport</span>
+        </div>
+        <div class="quick-cat-box" data-tab-link="menu">
+          <div class="quick-cat-icon" style="color: #94A3B8;">${Icons.grid}</div>
+          <span class="quick-cat-label">Barchasi</span>
+        </div>
       </div>
 
-      <div class="news-grid-columns">
-        ${filteredList.map(n => `
-          <article class="card-item-standard" data-article-click="${n.id}">
-            <div class="card-media-wrap">
-              <img class="card-media-img" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
-              <span class="card-category-floating">${n.categoryName}</span>
-            </div>
-            <div class="card-content-body">
-              <h4 class="card-heading-title">${n.title}</h4>
-              <p class="card-lead-text">${n.summary}</p>
-              <div class="card-meta-bottom">
-                <span>${Icons.clock} ${n.time} • ${n.date}</span>
+      <!-- 3. So'nggi Yangiliklar Ro'yxati -->
+      <div class="section-headline-bar">
+        <h2 class="headline-text">
+          ${this.searchQuery ? `Qidiruv: "${this.searchQuery}"` : 'So‘nggi yangiliklar'}
+        </h2>
+        <span class="headline-link-more" data-tab-link="menu">Barchasi ${Icons.chevronRight}</span>
+      </div>
+
+      <div class="news-stream-container">
+        ${streamNews.map(n => `
+          <div class="news-item-card" data-open-id="${n.id}">
+            <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
+            <div class="news-item-details">
+              <h4 class="news-item-title">${n.title}</h4>
+              <div class="news-item-meta">
+                <span>${Icons.clock} ${n.time}</span>
                 <span>${Icons.eye} ${n.views.toLocaleString()}</span>
               </div>
             </div>
-          </article>
+          </div>
         `).join('')}
       </div>
-
-      <!-- VIDEO YANGILIKLAR BLOKI (Media Lounge) -->
-      <section class="video-media-lounge">
-        <div class="video-heading-bar">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="video-badge-pill">${Icons.playCircle} VIDEO YANGILIKLAR</span>
-            <span style="font-size: 13px; color: #94A3B8;">Eksklyuziv reportajlar va intervyular</span>
-          </div>
-          <button style="color: var(--an-red); font-size: 12px; font-weight: 700;" data-cat-id="video">
-            Barcha videolar →
-          </button>
-        </div>
-
-        <div class="video-cards-grid">
-          ${newsList.filter(n => n.category === 'video' || n.videoUrl).concat(newsList.slice(0, 3)).slice(0, 3).map((v, i) => `
-            <div class="video-box-item" data-article-click="${v.id}">
-              <img src="${v.imageUrl}" alt="${v.title}" />
-              <div class="video-play-center">${Icons.playCircle}</div>
-              <div class="video-box-caption">
-                <span style="background: var(--an-red); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800;">VIDEO</span>
-                <h4 style="font-size: 13px; font-weight: 700; margin-top: 4px; color: #FFF;">${v.title}</h4>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </section>
     `;
   }
 
-  // «BARCHASI» MENYUSI EKRANI (Aynan skrinshotdagi 2-ekran!)
-  renderMenuScreen(categories) {
+  // -------------------------------------------------------------
+  // TAB 2: «BARCHASI» MENYUSI EKRANI (Rasmdagi 2-ekran)
+  // -------------------------------------------------------------
+  renderMenuView() {
+    const categories = store.getCategories();
+
     return `
-      <div class="menu-screen-viewport">
-        <div class="menu-head-title">
-          <span>Barchasi</span>
-          <button class="btn-header-round" id="menuInnerSearchBtn">${Icons.search}</button>
+      <div class="menu-view-screen">
+        <div class="menu-screen-header">
+          <h1 class="menu-screen-title">Barchasi</h1>
+          <button class="icon-btn" id="menuSearchBtn">${Icons.search}</button>
         </div>
 
-        <!-- 11 ta Toifalar Ro'yxati -->
-        <div class="menu-items-vertical">
+        <!-- 11 ta Bo'limlar Ro'yxati -->
+        <div class="categories-vertical-stack">
           ${categories.map(c => `
-            <div class="menu-item-tile" data-cat-id="${c.id}">
-              <div class="menu-item-left">
-                <div style="width: 26px; display: flex; align-items: center; justify-content: center; color: ${c.color};">
+            <div class="cat-vertical-row" data-cat-select="${c.id}">
+              <div class="cat-row-left">
+                <div class="cat-row-icon" style="color: ${c.color};">
                   ${getCategoryIcon(c.icon)}
                 </div>
-                <span class="menu-item-label">${c.name}</span>
+                <span class="cat-row-name">${c.name}</span>
               </div>
-              <span style="color: var(--text-muted);">${Icons.chevronRight}</span>
+              <span class="cat-row-chevron">${Icons.chevronRight}</span>
             </div>
           `).join('')}
         </div>
 
         <!-- Rasmdagi Brend Axborot Kartasi -->
-        <div class="brand-menu-banner-card" data-nav-tab="home">
-          <div class="brand-round-an-emblem">AN</div>
-          <div class="brand-banner-texts">
-            <h4 class="brand-banner-title">ANTIVIRUS NEWS</h4>
-            <p class="brand-banner-slogan">Global siyosat — oddiy tilda.<br>Qisqa va aniq yangiliklar.</p>
+        <div class="brand-identity-banner" data-tab-link="home">
+          <div class="brand-round-icon">AN</div>
+          <div class="brand-banner-body">
+            <h4 class="brand-banner-name">ANTIVIRUS NEWS</h4>
+            <p class="brand-banner-desc">Global siyosat — oddiy tilda.<br>Qisqa va aniq yangiliklar.</p>
           </div>
-          <span style="color: var(--text-muted);">${Icons.chevronRight}</span>
+          <span class="cat-row-chevron">${Icons.chevronRight}</span>
         </div>
 
-        <!-- 4 ta Doiraviy Ijtimoiy Tarmoq Tugmalari -->
-        <div class="social-buttons-grid-4">
-          <div class="social-circle-box" onclick="window.open('https://t.me', '_blank')">
-            <div class="social-circle-icon sn-tg">${Icons.telegram}</div>
-            <span class="social-circle-title">Telegram</span>
+        <!-- 4 ta Doiraviy Ijtimoiy Tarmoq -->
+        <div class="social-icons-row">
+          <div class="social-round-btn" onclick="window.open('https://t.me', '_blank')">
+            <div class="social-circle-wrap sn-telegram">${Icons.telegram}</div>
+            <span class="social-label">Telegram</span>
           </div>
 
-          <div class="social-circle-box" onclick="window.open('https://youtube.com', '_blank')">
-            <div class="social-circle-icon sn-yt">${Icons.youtube}</div>
-            <span class="social-circle-title">YouTube</span>
+          <div class="social-round-btn" onclick="window.open('https://youtube.com', '_blank')">
+            <div class="social-circle-wrap sn-youtube">${Icons.youtube}</div>
+            <span class="social-label">YouTube</span>
           </div>
 
-          <div class="social-circle-box" onclick="window.open('https://tiktok.com', '_blank')">
-            <div class="social-circle-icon sn-tt">${Icons.tiktok}</div>
-            <span class="social-circle-title">TikTok</span>
+          <div class="social-round-btn" onclick="window.open('https://tiktok.com', '_blank')">
+            <div class="social-circle-wrap sn-tiktok">${Icons.tiktok}</div>
+            <span class="social-label">TikTok</span>
           </div>
 
-          <div class="social-circle-box" onclick="window.open('https://instagram.com', '_blank')">
-            <div class="social-circle-icon sn-ig">${Icons.instagram}</div>
-            <span class="social-circle-title">Instagram</span>
+          <div class="social-round-btn" onclick="window.open('https://instagram.com', '_blank')">
+            <div class="social-circle-wrap sn-instagram">${Icons.instagram}</div>
+            <span class="social-label">Instagram</span>
           </div>
         </div>
       </div>
     `;
   }
 
-  // 6. Desktop Footer
-  renderDesktopFooter(categories) {
+  // -------------------------------------------------------------
+  // TAB 3: TRENDLAR EKRANI
+  // -------------------------------------------------------------
+  renderTrendView() {
+    const list = store.getNews().sort((a, b) => b.views - a.views);
+
     return `
-      <footer class="desktop-footer-area">
-        <div class="footer-content-inner">
-          <div>
-            <div class="brand-logo-wrap">
-              <div class="brand-symbol-an">AN</div>
-              <div class="brand-text-col">
-                <span class="brand-title-an">ANTIVIRUS</span>
-                <span class="brand-slogan-an">NEWS MEDIA</span>
+      <div class="section-headline-bar">
+        <h2 class="headline-text" style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--an-red);">${Icons.trendingUp}</span> Trenddagi xabarlar
+        </h2>
+        <span style="font-size: 11px; color: var(--text-dim);">Eng ko‘p o‘qilgan</span>
+      </div>
+
+      <div class="news-stream-container">
+        ${list.map((n, i) => `
+          <div class="news-item-card" data-open-id="${n.id}">
+            <div style="font-size: 18px; font-weight: 900; color: ${i < 3 ? 'var(--an-red)' : 'var(--text-dim)'}; width: 26px; display: flex; align-items: center; justify-content: center;">
+              #${i + 1}
+            </div>
+            <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" />
+            <div class="news-item-details">
+              <h4 class="news-item-title">${n.title}</h4>
+              <div class="news-item-meta">
+                <span>${Icons.clock} ${n.time}</span>
+                <span>${Icons.eye} ${n.views.toLocaleString()}</span>
               </div>
             </div>
-            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 14px 0 16px 0;">
-              Global siyosat — oddiy tilda. Qisqa va aniq yangiliklar. Xalqaro va mahalliy hodisalarning eng ishonchli mustaqil manbasi.
-            </p>
-            <div class="footer-social-row">
-              <a href="https://t.me" target="_blank" class="footer-social-pill sn-tg">${Icons.telegram}</a>
-              <a href="https://youtube.com" target="_blank" class="footer-social-pill sn-yt">${Icons.youtube}</a>
-              <a href="https://tiktok.com" target="_blank" class="footer-social-pill sn-tt">${Icons.tiktok}</a>
-              <a href="https://instagram.com" target="_blank" class="footer-social-pill sn-ig">${Icons.instagram}</a>
-            </div>
           </div>
-
-          <div>
-            <h4 class="footer-col-head">Bo‘limlar</h4>
-            <ul class="footer-links-list">
-              <li><a href="#" data-cat-id="siyosat">Siyosat</a></li>
-              <li><a href="#" data-cat-id="dunyo">Dunyo</a></li>
-              <li><a href="#" data-cat-id="jamiyat">Jamiyat</a></li>
-              <li><a href="#" data-cat-id="biznes">Biznes</a></li>
-              <li><a href="#" data-cat-id="sport">Sport</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 class="footer-col-head">Media & Loyihalar</h4>
-            <ul class="footer-links-list">
-              <li><a href="#" data-cat-id="video">Video yangiliklar</a></li>
-              <li><a href="#" data-cat-id="tahlil">Tahliliy maqolalar</a></li>
-              <li><a href="#" data-cat-id="foto">Foto galereya</a></li>
-              <li><a href="#" data-cat-id="trend">Trend xabarlar</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 class="footer-col-head">Tahririyat</h4>
-            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;">
-              O‘zbekiston Respublikasi Matbuot va axborot agentligida ro‘yxatdan o‘tgan guvohnoma № 1428.<br>
-              Sayt materiallaridan to‘liq yoki qisman foydalanilganda «ANTIVIRUS NEWS» veb-saytiga giperhavola ko‘rsatilishi shart.
-            </p>
-          </div>
-        </div>
-
-        <div class="footer-copyright-bar">
-          <span>© 2026 «ANTIVIRUS NEWS». Barcha huquqlar himoyalangan.</span>
-          <span>Versiya 3.0.0 • Maxfiylik kelishuvi</span>
-        </div>
-      </footer>
-    `;
-  }
-
-  // 7. Mobil Pastki Bar (Bottom Navigation)
-  renderMobileBottomBar() {
-    return `
-      <div class="mobile-bottom-navigation">
-        <div class="mobile-nav-btn ${this.currentMobileTab === 'home' ? 'active' : ''}" data-nav-tab="home">
-          <span>${Icons.home}</span>
-          <span class="mobile-nav-label">Asosiy</span>
-        </div>
-
-        <div class="mobile-nav-btn ${this.currentMobileTab === 'trend' ? 'active' : ''}" data-nav-tab="trend">
-          <span>${Icons.trendingUp}</span>
-          <span class="mobile-nav-label">Trend</span>
-        </div>
-
-        <!-- MARKAZIY 3D QIZIL "AN" FLOATING TUGMASI -->
-        <div class="mobile-center-an-wrap" id="centerAnQuickBtn" title="ANTIVIRUS Tezkor">
-          <div class="mobile-center-an-circle">AN</div>
-        </div>
-
-        <div class="mobile-nav-btn ${this.currentMobileTab === 'video' ? 'active' : ''}" data-nav-tab="video">
-          <span>${Icons.playCircle}</span>
-          <span class="mobile-nav-label">Video</span>
-        </div>
-
-        <div class="mobile-nav-btn ${this.currentMobileTab === 'menu' ? 'active' : ''}" data-nav-tab="menu">
-          <span>${Icons.menu}</span>
-          <span class="mobile-nav-label">Barchasi</span>
-        </div>
+        `).join('')}
       </div>
     `;
   }
 
-  // 8. Alohida Maqola Modali / Sahifasi
+  // -------------------------------------------------------------
+  // TAB 4: VIDEO YANGILIKLAR EKRANI
+  // -------------------------------------------------------------
+  renderVideoView() {
+    const list = store.getNews();
+
+    return `
+      <div class="section-headline-bar">
+        <h2 class="headline-text" style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--an-red);">${Icons.playCircle}</span> Video yangiliklar
+        </h2>
+        <span style="font-size: 11px; color: var(--text-dim);">Eksklyuziv</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        ${list.slice(0, 4).map(v => `
+          <div class="hero-card-banner" style="height: 200px;" data-open-id="${v.id}">
+            <img class="hero-card-img" src="${v.imageUrl}" alt="${v.title}" />
+            <div class="hero-card-gradient"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; border-radius: 50%; background: var(--an-red); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px var(--an-red-glow);">
+              ${Icons.playCircle}
+            </div>
+            <div class="hero-card-info">
+              <span class="hero-tag-badge">VIDEO</span>
+              <h3 class="hero-card-title">${v.title}</h3>
+              <div class="hero-card-meta">
+                <span>${Icons.clock} ${v.time} • ${v.views.toLocaleString()} ko‘rildi</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // -------------------------------------------------------------
+  // ALOHIDA MAQOLA O'QISH OYNASI (MODAL)
+  // -------------------------------------------------------------
   renderArticleModal() {
     if (!this.activeArticleId) return '';
 
@@ -624,173 +465,137 @@ class AntivirusPlatform {
     const isSaved = store.getSavedIds().includes(article.id);
 
     return `
-      <div class="article-modal-scrim open" id="articleModalOverlay">
-        <div class="article-modal-card">
-          <button class="btn-modal-close" id="closeArticleBtn">${Icons.close}</button>
+      <div class="article-reader-backdrop open" id="articleBackdrop">
+        <div class="article-reader-modal">
+          <button class="close-modal-round" id="closeReaderBtn">${Icons.close}</button>
 
-          <div class="article-hero-wrap">
-            <img class="article-hero-img" src="${article.imageUrl}" alt="${article.title}" />
+          <div class="article-media-cover">
+            <img src="${article.imageUrl}" alt="${article.title}" />
           </div>
 
-          <div class="article-sheet-inner">
-            <div class="article-meta-badge-row">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="category-tag-pill">${article.categoryName}</span>
-                <span style="font-size: 12px; color: var(--text-muted);">${Icons.clock} ${article.time} • ${article.date}</span>
-              </div>
-              <span style="font-size: 12px; color: var(--text-muted);">${Icons.eye} ${article.views.toLocaleString()} ko‘rildi</span>
+          <div class="article-text-body">
+            <div class="article-badges-row">
+              <span class="hero-tag-badge">${article.categoryName}</span>
+              <span>${Icons.clock} ${article.time} • ${article.date}</span>
+              <span>${Icons.eye} ${article.views.toLocaleString()}</span>
             </div>
 
-            <h1 class="article-main-heading">${article.title}</h1>
+            <h1 class="article-title-text">${article.title}</h1>
 
             <!-- Audio Player (Ovozli eshitish) -->
-            <div class="article-audio-control-bar">
-              <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700;">
+            <div class="audio-listening-panel">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700;">
                 <span>🔊</span> <span>Ovozli eshitish</span>
               </div>
-              <button class="btn-audio-listen" id="audioToggleBtn">
-                ${this.isSpeechPlaying ? 'To‘xtatish' : 'Tinglash (Play)'}
+              <button class="audio-play-pill" id="articleAudioBtn">
+                ${this.isAudioPlaying ? 'To‘xtatish' : 'Tinglash (Play)'}
               </button>
             </div>
 
             ${article.summary ? `
-              <div class="article-lead-paragraph">${article.summary}</div>
+              <div class="article-lead-summary">${article.summary}</div>
             ` : ''}
 
-            ${article.videoUrl ? `
-              <div style="margin: 20px 0; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; background: #000;">
-                <iframe width="100%" height="100%" src="${article.videoUrl}" frameborder="0" allowfullscreen></iframe>
-              </div>
-            ` : ''}
+            <div class="article-paragraphs">${article.content || article.summary}</div>
 
-            <div class="article-content-body">${article.content || article.summary}</div>
-
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0;">
-              ${(article.tags || []).map(t => `<span style="background: var(--pill-bg); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">#${t}</span>`).join('')}
-            </div>
-
-            <div class="article-action-buttons">
-              <div style="display: flex; gap: 10px;">
-                <button class="btn-action-tool ${isSaved ? 'saved' : ''}" id="saveBtn">
+            <div class="article-action-tools-row">
+              <div style="display: flex; gap: 8px;">
+                <button class="tool-action-btn ${isSaved ? 'saved' : ''}" id="articleBookmarkBtn">
                   ${Icons.bookmark} <span>${isSaved ? 'Saqlangan' : 'Saqlash'}</span>
                 </button>
-                <button class="btn-action-tool" id="shareBtn">
+                <button class="tool-action-btn" id="articleShareBtn">
                   ${Icons.share} <span>Ulashish</span>
                 </button>
               </div>
 
-              <div style="display: flex; gap: 6px;">
-                <button class="btn-action-tool" onclick="document.querySelector('.article-content-body').style.fontSize = '18px'">A+</button>
-                <button class="btn-action-tool" onclick="document.querySelector('.article-content-body').style.fontSize = '14px'">A-</button>
-              </div>
+              <button class="tool-action-btn" id="articleBackBtn">
+                <span>← Orqaga</span>
+              </button>
             </div>
           </div>
-        </div>
-      </div>
-    `;
-  }
-
-  // 9. Yangilik Qo'shish Modali (Admin)
-  renderQuickAddModal(categories) {
-    if (!this.isQuickAddOpen) return '';
-
-    return `
-      <div class="article-modal-scrim open" id="quickAddOverlay">
-        <div class="article-modal-card" style="max-width: 580px; padding: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-            <h3 style="font-size: 18px; font-weight: 800;">Yangi Yangilik Joylash</h3>
-            <button class="btn-modal-close" id="closeQuickAddBtn" style="position: static;">${Icons.close}</button>
-          </div>
-
-          <form id="quickAddForm">
-            <div class="form-field-item">
-              <label class="form-field-label">Sarlavha *</label>
-              <input type="text" name="title" class="form-control-input" required placeholder="Yangilik sarlavhasi..." />
-            </div>
-
-            <div class="form-field-item">
-              <label class="form-field-label">Kategoriya *</label>
-              <select name="category" class="form-control-select">
-                ${categories.filter(c => c.id !== 'all').map(c => `
-                  <option value="${c.id}">${c.name}</option>
-                `).join('')}
-              </select>
-            </div>
-
-            <div class="form-field-item">
-              <label class="form-field-label">Rasm URL</label>
-              <input type="url" name="imageUrl" class="form-control-input" value="https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1000&q=80" />
-            </div>
-
-            <div class="form-field-item">
-              <label class="form-field-label">Qisqa Anons</label>
-              <textarea name="summary" class="form-control-textarea" rows="2" placeholder="Qisqacha mazmuni..."></textarea>
-            </div>
-
-            <div class="form-field-item">
-              <label class="form-field-label">To‘liq Matn *</label>
-              <textarea name="content" class="form-control-textarea" rows="4" required placeholder="Batafsil matn..."></textarea>
-            </div>
-
-            <button type="submit" class="btn-quick-create" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
-              Nashr qilish
-            </button>
-          </form>
         </div>
       </div>
     `;
   }
 
   // -------------------------------------------------------------
-  // HODISALARNI BIRIKTIRISH (EVENT LISTENERS)
+  // HODISALARNI BIRIKTIRISH
   // -------------------------------------------------------------
   bindEvents() {
-    // 1. Dark/Light Theme toggle
-    document.querySelectorAll('#desktopThemeBtn, #mobileThemeBtn').forEach(btn => {
-      btn.addEventListener('click', () => this.toggleTheme());
+    // 1. Rejim almashtirish (Theme toggle)
+    document.getElementById('themeSwitchBtn')?.addEventListener('click', () => {
+      this.toggleTheme();
     });
 
-    // 2. Kategoriya tanlash
-    document.querySelectorAll('[data-cat-id]').forEach(btn => {
+    // 2. Qidiruv lupasi
+    const handleSearch = () => {
+      const q = prompt('Qidirmoqchi bo‘lgan yangilikni kiriting:');
+      if (q !== null) {
+        this.searchQuery = q.trim();
+        this.setTab('home');
+      }
+    };
+    document.getElementById('searchTriggerBtn')?.addEventListener('click', handleSearch);
+    document.getElementById('menuSearchBtn')?.addEventListener('click', handleSearch);
+
+    // 3. Bildirishnomalar
+    document.getElementById('notifBellBtn')?.addEventListener('click', () => {
+      const notifs = store.getNotifications();
+      const msg = notifs.map(n => `• ${n.title}: ${n.text}`).join('\n\n');
+      alert(`🔔 ANTIVIRUS NEWS:\n\n${msg || 'Yangi bildirishnomalar yo‘q'}`);
+    });
+
+    // 4. Kategoriya tanlash
+    document.querySelectorAll('[data-cat-select]').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const cat = e.currentTarget.getAttribute('data-cat-id');
+        const cat = e.currentTarget.getAttribute('data-cat-select');
         if (cat) this.setCategory(cat);
       });
     });
 
-    // 3. Tab tanlash (Home, Trend, Video, Menu)
-    document.querySelectorAll('[data-nav-tab]').forEach(btn => {
+    // 5. Tab almashtirish
+    document.querySelectorAll('[data-tab-link]').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const tab = e.currentTarget.getAttribute('data-nav-tab');
-        if (tab) this.setMobileTab(tab);
+        const tab = e.currentTarget.getAttribute('data-tab-link');
+        if (tab) this.setTab(tab);
       });
     });
 
-    // 4. Maqolani ochish
-    document.querySelectorAll('[data-article-click]').forEach(card => {
-      card.addEventListener('click', (e) => {
-        const id = card.getAttribute('data-article-click');
+    // 6. Markaziy AN tugmasi
+    document.getElementById('centerAnCircleBtn')?.addEventListener('click', () => {
+      this.showToast('🛡️ ANTIVIRUS NEWS — Bosh sahifa yangilandi');
+      this.selectedCategory = 'all';
+      this.searchQuery = '';
+      this.setTab('home');
+    });
+
+    // 7. Maqolani ochish
+    document.querySelectorAll('[data-open-id]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const id = el.getAttribute('data-open-id');
         if (id) this.openArticle(id);
       });
     });
 
-    // 5. Maqola modalini yopish
-    document.getElementById('closeArticleBtn')?.addEventListener('click', () => {
+    // 8. Maqolani yopish
+    document.getElementById('closeReaderBtn')?.addEventListener('click', () => {
       this.closeArticle();
     });
-
-    document.getElementById('articleModalOverlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'articleModalOverlay') this.closeArticle();
+    document.getElementById('articleBackBtn')?.addEventListener('click', () => {
+      this.closeArticle();
+    });
+    document.getElementById('articleBackdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'articleBackdrop') this.closeArticle();
     });
 
-    // 6. Audio eshitish
-    document.getElementById('audioToggleBtn')?.addEventListener('click', () => {
+    // 9. Audio eshitish
+    document.getElementById('articleAudioBtn')?.addEventListener('click', () => {
       const art = store.getNewsById(this.activeArticleId);
       if (art) this.toggleAudio(`${art.title}. ${art.summary}. ${art.content}`);
     });
 
-    // 7. Saqlash
-    document.getElementById('saveBtn')?.addEventListener('click', () => {
+    // 10. Saqlash
+    document.getElementById('articleBookmarkBtn')?.addEventListener('click', () => {
       if (this.activeArticleId) {
         const saved = store.toggleSaveNews(this.activeArticleId);
         this.showToast(saved ? '⭐ Maqola saqlandi' : 'Maqola saqlanganlardan olindi');
@@ -798,83 +603,10 @@ class AntivirusPlatform {
       }
     });
 
-    // 8. Ulashish
-    document.getElementById('shareBtn')?.addEventListener('click', () => {
+    // 11. Ulashish
+    document.getElementById('articleShareBtn')?.addEventListener('click', () => {
       const art = store.getNewsById(this.activeArticleId);
       if (art) this.shareArticle(art);
-    });
-
-    // 9. Desktop Qidiruv
-    const searchInput = document.getElementById('desktopSearchInput');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        this.searchQuery = e.target.value.trim();
-        clearTimeout(this.searchDebounce);
-        this.searchDebounce = setTimeout(() => this.render(), 300);
-      });
-    }
-
-    // 10. Mobil Qidiruv
-    const onSearchTrigger = () => {
-      const q = prompt('Qidirish uchun kalit so‘zni kiriting:');
-      if (q !== null) {
-        this.searchQuery = q.trim();
-        this.setMobileTab('home');
-      }
-    };
-    document.getElementById('mobileSearchBtn')?.addEventListener('click', onSearchTrigger);
-    document.getElementById('menuInnerSearchBtn')?.addEventListener('click', onSearchTrigger);
-
-    // 11. Markaziy AN tugmasi
-    document.getElementById('centerAnQuickBtn')?.addEventListener('click', () => {
-      this.showToast('🛡️ ANTIVIRUS NEWS — Yangiliklar tasmasi yangilandi!');
-      this.setMobileTab('home');
-    });
-
-    // 12. Bildirishnomalar
-    document.querySelectorAll('#desktopBellBtn, #mobileBellBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const notifs = store.getNotifications();
-        const msg = notifs.map(n => `• ${n.title}: ${n.text}`).join('\n\n');
-        alert(`🔔 ANTIVIRUS NEWS BILDIRISHNOMALARI:\n\n${msg || 'Yangi bildirishnoma yo‘q'}`);
-      });
-    });
-
-    // 13. Tezkor yangilik qo'shish (Admin)
-    document.querySelectorAll('#desktopAddNewsBtn, #mobileAddBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.isQuickAddOpen = true;
-        this.render();
-      });
-    });
-
-    document.getElementById('closeQuickAddBtn')?.addEventListener('click', () => {
-      this.isQuickAddOpen = false;
-      this.render();
-    });
-
-    document.getElementById('quickAddOverlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'quickAddOverlay') {
-        this.isQuickAddOpen = false;
-        this.render();
-      }
-    });
-
-    document.getElementById('quickAddForm')?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      store.createNews({
-        title: fd.get('title'),
-        category: fd.get('category'),
-        imageUrl: fd.get('imageUrl'),
-        summary: fd.get('summary'),
-        content: fd.get('content'),
-        isHero: false,
-        isTrending: true
-      });
-      this.isQuickAddOpen = false;
-      this.showToast('✅ Yangi maqola muvaffaqiyatli nashr qilindi!');
-      this.setMobileTab('home');
     });
   }
 }
@@ -882,8 +614,8 @@ class AntivirusPlatform {
 // Ishga tushirish (xavfsiz va darhol)
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    window.antivirusPlatform = new AntivirusPlatform();
+    window.antivirusApp = new AntivirusApp();
   });
 } else {
-  window.antivirusPlatform = new AntivirusPlatform();
+  window.antivirusApp = new AntivirusApp();
 }
