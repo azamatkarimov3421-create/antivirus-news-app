@@ -27,13 +27,22 @@ class AntivirusApp {
     // Reaktiv store yangilanishlarini tinglash
     store.subscribe(() => this.render());
 
-    // Escape tugmasi bosilganda oynalarni yopish
+    // Escape tugmasi oynalarni yopadi, Ctrl+Shift+A esa maxfiy admin panelni ochadi
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (this.isCfModalOpen) this.closeCfModal();
         if (this.activeArticleId) this.closeArticle();
       }
+      if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        this.openCfModal('connect');
+      }
     });
+
+    // Maxfiy admin havolasi: ?admin=true
+    if (window.location.search.includes('admin=true')) {
+      setTimeout(() => this.openCfModal('connect'), 300);
+    }
 
     this.render();
   }
@@ -159,10 +168,6 @@ class AntivirusApp {
           </div>
 
           <div class="header-controls">
-            <!-- Cloudflare Baza & Yangilik qo'shish tugmasi -->
-            <button class="icon-btn" id="headerCloudflareBtn" title="Cloudflare D1 & R2 Baza">
-              <span style="font-size: 14px;">☁️</span>
-            </button>
             <button class="icon-btn" id="themeSwitchBtn" title="Rejimni almashtirish">
               ${theme === 'dark' ? Icons.sun : Icons.moon}
             </button>
@@ -358,29 +363,7 @@ class AntivirusApp {
       <div class="menu-view-screen">
         <div class="menu-screen-header">
           <h1 class="menu-screen-title">Barchasi</h1>
-          <div style="display: flex; gap: 8px;">
-            <button class="icon-btn" id="menuAddNewsBtn" title="Yangi xabar qo‘shish">✍️</button>
-            <button class="icon-btn" id="menuSearchBtn">${Icons.search}</button>
-          </div>
-        </div>
-
-        <!-- CLOUDFLARE D1 + R2 BAZA HOLATI VA BOSHQARUV KARTASI -->
-        <div class="db-status-banner" id="openCloudflareModalBtn">
-          <div class="db-status-left">
-            <span class="db-status-pulse ${isCfConnected ? 'online' : 'offline'}"></span>
-            <div>
-              <div class="db-title-row">
-                <span class="db-name">Cloudflare D1 & R2 Baza</span>
-                <span class="db-badge ${isCfConnected ? 'badge-connected' : 'badge-local'}">
-                  ${isCfConnected ? '🟢 Ulangan (15 GB)' : '🟡 Mahalliy Rejim'}
-                </span>
-              </div>
-              <p class="db-subtext">
-                ${isCfConnected ? 'D1 SQL + R2 Media Storage faol' : 'Cloudflare API ulash va yangilik qo‘shish'}
-              </p>
-            </div>
-          </div>
-          <span class="cat-row-chevron">${Icons.chevronRight}</span>
+          <button class="icon-btn" id="menuSearchBtn">${Icons.search}</button>
         </div>
 
         <!-- 11 ta Bo'limlar Ro'yxati -->
@@ -741,11 +724,16 @@ class AntivirusApp {
       this.toggleTheme();
     });
 
-    // 2. Qidiruv lupasi
+    // 2. Qidiruv lupasi (Maxfiy: "admin" deb yozilsa, admin boshqaruv oynasi ochiladi)
     const handleSearch = () => {
       const q = prompt('Qidirmoqchi bo‘lgan yangilikni kiriting:');
       if (q !== null) {
-        this.searchQuery = q.trim();
+        const trimmed = q.trim();
+        if (trimmed.toLowerCase() === 'admin' || trimmed.toLowerCase() === '/admin' || trimmed.toLowerCase() === 'baza') {
+          this.openCfModal('connect');
+          return;
+        }
+        this.searchQuery = trimmed;
         this.setTab('home');
       }
     };
@@ -757,17 +745,6 @@ class AntivirusApp {
       const notifs = store.getNotifications();
       const msg = notifs.map(n => `• ${n.title}: ${n.text}`).join('\n\n');
       alert(`🔔 ANTIVIRUS NEWS:\n\n${msg || 'Yangi bildirishnomalar yo‘q'}`);
-    });
-
-    // 4. Cloudflare Baza Modalini Ochish
-    document.getElementById('headerCloudflareBtn')?.addEventListener('click', () => {
-      this.openCfModal('connect');
-    });
-    document.getElementById('openCloudflareModalBtn')?.addEventListener('click', () => {
-      this.openCfModal('connect');
-    });
-    document.getElementById('menuAddNewsBtn')?.addEventListener('click', () => {
-      this.openCfModal('add-news');
     });
 
     // 5. Cloudflare Modalini Yopish
@@ -879,8 +856,19 @@ class AntivirusApp {
       });
     });
 
-    // 12. Markaziy AN tugmasi
+    // 12. Markaziy AN tugmasi (3 marta tez-tez bosilsa - maxfiy admin panel ochiladi)
+    this.anClickCount = this.anClickCount || 0;
     document.getElementById('centerAnCircleBtn')?.addEventListener('click', () => {
+      this.anClickCount++;
+      clearTimeout(this.anClickTimer);
+      this.anClickTimer = setTimeout(() => { this.anClickCount = 0; }, 700);
+
+      if (this.anClickCount >= 3) {
+        this.anClickCount = 0;
+        this.openCfModal('connect');
+        return;
+      }
+
       this.showToast('🛡️ ANTIVIRUS NEWS — Bosh sahifa yangilandi');
       this.selectedCategory = 'all';
       this.searchQuery = '';

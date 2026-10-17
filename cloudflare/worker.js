@@ -23,8 +23,8 @@ export default {
         return new Response(JSON.stringify({
           status: 'ok',
           service: 'ANTIVIRUS NEWS API',
-          database: 'Cloudflare D1 SQL (5 GB Free)',
-          storage: 'Cloudflare R2 Object Storage (10 GB Free)',
+          database: env.DB ? 'Cloudflare D1 SQL (5 GB Faol)' : 'D1 mavjud emas',
+          storage: env.MEDIA_BUCKET ? 'Cloudflare R2 (Faol)' : 'Rasm URL rejimi',
           time: new Date().toISOString()
         }), {
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
@@ -127,6 +127,13 @@ export default {
 
       // 5. POST /api/upload — Rasmni Cloudflare R2 Storage ga yuklash
       if (request.method === 'POST' && url.pathname === '/api/upload') {
+        if (!env.MEDIA_BUCKET) {
+          return new Response(JSON.stringify({ error: 'R2 xotira ulanmagan. Iltimos, rasm URL manzilini kiriting.' }), {
+            status: 400,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+          });
+        }
+
         const formData = await request.formData();
         const file = formData.get('file');
 

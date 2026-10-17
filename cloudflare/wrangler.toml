@@ -6,9 +6,11 @@ compatibility_date = "2026-10-17"
 [[d1_databases]]
 binding = "DB"
 database_name = "antivirus-news-db"
-database_id = "YOUR_D1_DATABASE_ID_HERE"
+database_id = "ad7f702f-702a-44ef-9e76-c6f5b1107273"
 
-# 2. Cloudflare R2 Media Storage Bucket Binding
-[[r2_buckets]]
-binding = "MEDIA_BUCKET"
-bucket_name = "antivirus-media"
+# 2. Cloudflare R2 Media Storage (Ixtiyoriy - agar R2 yoqilsa)
+# [[r2_buckets]]
+# binding = "MEDIA_BUCKET"
+# bucket_name = "antivirus-media"
+
+
