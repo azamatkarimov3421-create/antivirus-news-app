@@ -197,9 +197,55 @@ Video lavhamizda:
 - Ekologik toza quyosh panellari bilan ta’minlangan yashil arxitektura;
 - To‘g‘ridan-to‘g‘ri tezyurar metro va aeropoyezd bekati ko‘rsatilgan.`,
     author: 'ANTIVIRUS Media',
+    source: 'ANTIVIRUS Tahririyati',
+    sourceUrl: 'https://youtube.com',
     readTime: 'Videoni ko‘rish (4:15)',
     tags: ['Video', 'Toshkent', 'Aeroport', 'Reportaj'],
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+  },
+  {
+    id: 'an-009',
+    title: 'Kiberxavfsizlik: 2026-yilning eng xavfli viruslari va ulardan himoyalanish yo‘llari',
+    category: 'video',
+    categoryName: 'Video',
+    time: '13:20',
+    date: '11.10.2026',
+    views: 18450,
+    isHero: false,
+    isTrending: true,
+    isSlider: false,
+    imageUrl: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80',
+    summary: 'Sun’iy intellekt orqali amalga oshirilayotgan yangi avlod fishing hujumlari va shaxsiy ma’lumotlarni shifrlash bo‘yicha video qo‘llanma.',
+    content: `Bugungi kunda kiberxavfsizlik masalasi har bir internet foydalanuvchisi uchun birlamchi ahamiyat kasb etmoqda. 
+
+Ushbu video lavhamizda kiberxavfsizlik bo‘yicha ekspertlar smartfon va kompyuterlarni kiberhujumlardan asrashning 5 ta oltin qoidasini batafsil tushuntirib berishadi.`,
+    author: 'Tech Media',
+    source: 'CyberShield',
+    sourceUrl: 'https://youtube.com',
+    readTime: 'Videoni ko‘rish (5:30)',
+    tags: ['Video', 'Kiberxavfsizlik', 'Texnologiya'],
+    videoUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk'
+  },
+  {
+    id: 'an-010',
+    title: 'Samarqand: Registon maydonida o‘tkazilgan xalqaro madaniy festivaldan reportaj',
+    category: 'video',
+    categoryName: 'Video',
+    time: '10:45',
+    date: '10.10.2026',
+    views: 22800,
+    isHero: false,
+    isTrending: false,
+    isSlider: true,
+    imageUrl: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?auto=format&fit=crop&w=1200&q=80',
+    summary: 'Dunyoning 80 dan ortiq mamlakatidan kelgan san’atkorlar ishtirokidagi ajoyib konsert va yorug‘lik shousidan eksklyuziv video kadrlar.',
+    content: `Samarqanddagi muhtasham Registon maydoni xalqaro san’at bayrami markaziga aylandi. 3D-mapping yorug‘lik shoulari va milliy musiqiy merosimiz jahon sahnasida yangradi.`,
+    author: 'Madaniyat Bo‘limi',
+    source: 'Samarqand TV',
+    sourceUrl: 'https://youtube.com',
+    readTime: 'Videoni ko‘rish (3:50)',
+    tags: ['Video', 'Samarqand', 'Madaniyat'],
+    videoUrl: 'https://www.youtube.com/watch?v=fJ9rUzIMcZQ'
   }
 ];
 

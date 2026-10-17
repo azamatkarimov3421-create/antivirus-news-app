@@ -30,14 +30,32 @@ class NewsStore {
 
   init() {
     try {
-      if (!localStorage.getItem(STORAGE_KEYS.NEWS)) {
-        // Dastlabki yangiliklarga manba qo'shish
+      const storedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
+      if (!storedNews) {
         const enriched = INITIAL_NEWS.map(n => ({
           ...n,
           source: n.source || 'ANTIVIRUS Tahririyati',
           sourceUrl: n.sourceUrl || ''
         }));
         localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(enriched));
+      } else {
+        try {
+          const currentList = JSON.parse(storedNews);
+          let updated = false;
+          INITIAL_NEWS.forEach(initItem => {
+            if (!currentList.some(n => n.id === initItem.id)) {
+              currentList.push({
+                ...initItem,
+                source: initItem.source || 'ANTIVIRUS Tahririyati',
+                sourceUrl: initItem.sourceUrl || ''
+              });
+              updated = true;
+            }
+          });
+          if (updated) {
+            localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
+          }
+        } catch {}
       }
       if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
         localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));

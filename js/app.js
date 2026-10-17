@@ -86,9 +86,12 @@ export function parseVideoEmbed(url) {
 
 class AntivirusApp {
   constructor() {
-    this.currentTab = 'home'; // 'home' | 'trend' | 'video' | 'menu'
+    this.currentTab = 'home'; // 'home' | 'trend' | 'video' | 'menu' | 'saved'
     this.selectedCategory = 'all';
     this.searchQuery = '';
+    this.isSearchOpen = false;
+    this.isNotifOpen = false;
+    this.heroSlideIndex = 0;
     this.activeArticleId = null;
     this.isCfModalOpen = false;
     this.cfActiveTab = 'stats'; // 'stats' | 'add-news' | 'video' | 'list'
@@ -282,6 +285,9 @@ class AntivirusApp {
     const theme = store.getTheme();
     const categories = store.getCategories();
     const isCfConnected = store.isCloudflareConnected();
+    const notifications = store.getNotifications();
+    const unreadNotifsCount = notifications.filter(n => !n.read).length;
+    const savedCount = store.getSavedIds().length;
 
     root.innerHTML = `
       <div class="app-container" data-theme="${theme}">
@@ -310,6 +316,10 @@ class AntivirusApp {
                 <span>${Icons.playCircle}</span>
                 <span>Video</span>
               </button>
+              <button class="desktop-nav-link ${this.currentTab === 'saved' ? 'active' : ''}" data-tab-link="saved">
+                <span>${Icons.bookmark}</span>
+                <span>Saqlanganlar ${savedCount > 0 ? `(${savedCount})` : ''}</span>
+              </button>
               <button class="desktop-nav-link ${this.currentTab === 'menu' ? 'active' : ''}" data-tab-link="menu">
                 <span>${Icons.menu}</span>
                 <span>Barchasi</span>
@@ -326,21 +336,67 @@ class AntivirusApp {
               <button class="icon-btn" id="themeSwitchBtn" title="Rejimni almashtirish">
                 ${theme === 'dark' ? Icons.sun : Icons.moon}
               </button>
-              <button class="icon-btn" id="searchTriggerBtn" title="Qidiruv">
+              <button class="icon-btn ${this.isSearchOpen ? 'active' : ''}" id="searchTriggerBtn" title="Qidiruv" ${this.isSearchOpen ? 'style="background: var(--an-red); color: #fff;"' : ''}>
                 ${Icons.search}
               </button>
               <button class="icon-btn" id="notifBellBtn" title="Bildirishnomalar">
                 ${Icons.bell}
+                ${unreadNotifsCount > 0 ? `<span class="notif-badge-dot"></span>` : ''}
               </button>
               <button class="icon-btn desktop-admin-quick-btn" id="desktopAdminBtn" title="Admin Baza Paneli" style="color: var(--an-red);">
                 ${Icons.database}
               </button>
+
+              <!-- Zamonaviy Bildirishnomalar Paneli (Dropdown) -->
+              <div class="notifications-dropdown-menu ${this.isNotifOpen ? 'open' : ''}" id="notifDropdown">
+                <div class="notif-dropdown-header">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span>🔔</span>
+                    <h4>Bildirishnomalar</h4>
+                  </div>
+                  ${unreadNotifsCount > 0 ? `
+                    <button class="notif-mark-read-btn" id="notifMarkAllReadBtn">O‘qilgan deb belgilash</button>
+                  ` : ''}
+                </div>
+                <div class="notif-items-list">
+                  ${notifications.length === 0 ? `
+                    <div style="padding: 20px; text-align: center; font-size: 12px; color: var(--text-dim);">Bildirishnomalar yo‘q</div>
+                  ` : notifications.map(n => `
+                    <div class="notif-card-item ${n.read ? 'read' : 'unread'}">
+                      <div class="notif-card-dot"></div>
+                      <div class="notif-card-content">
+                        <div class="notif-card-title">${n.title}</div>
+                        <div class="notif-card-text">${n.text}</div>
+                        <div class="notif-card-time">${n.time}</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
             </div>
           </div>
         </header>
 
+        <!-- Interaktiv Qidiruv Satri (Dropdown Drawer) -->
+        <div class="header-search-drawer ${this.isSearchOpen ? 'open' : ''}" id="headerSearchDrawer">
+          <div class="search-input-wrap">
+            <span class="search-inside-icon">${Icons.search}</span>
+            <input
+              type="search"
+              id="headerSearchInput"
+              class="search-input-field"
+              placeholder="Yangiliklar bo‘yicha qidiruv (mavzu, so‘z yoki 'admin')..."
+              value="${this.searchQuery}"
+              autocomplete="off"
+            />
+            ${this.searchQuery ? `
+              <button class="search-inside-clear" id="headerSearchClearBtn" title="Tozalash">✕</button>
+            ` : ''}
+          </div>
+        </div>
+
         <!-- 2. Gorizontal Toifalar (Swipeable Tabs) -->
-        ${this.currentTab !== 'menu' ? this.renderCategoryTabs(categories) : ''}
+        ${this.currentTab !== 'menu' && this.currentTab !== 'saved' ? this.renderCategoryTabs(categories) : ''}
 
         <!-- 3. Asosiy Tana (Body) -->
         <main class="main-view-body">
@@ -412,6 +468,8 @@ class AntivirusApp {
       return this.renderTrendView();
     } else if (this.currentTab === 'video') {
       return this.renderVideoView();
+    } else if (this.currentTab === 'saved') {
+      return this.renderSavedView();
     } else {
       return this.renderHomeView();
     }
@@ -430,19 +488,49 @@ class AntivirusApp {
     if (this.searchQuery) {
       list = list.filter(n =>
         n.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        n.summary.toLowerCase().includes(this.searchQuery.toLowerCase())
+        (n.summary && n.summary.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+        (n.content && n.content.toLowerCase().includes(this.searchQuery.toLowerCase()))
       );
     }
 
-    const heroNews = list.find(n => n.isHero) || list[0];
+    const featuredList = list.filter(n => n.isSlider || n.isHero);
+    const sliderItems = featuredList.length > 0 ? featuredList : list.slice(0, 4);
+    const currentHeroIndex = sliderItems.length > 0 ? (this.heroSlideIndex % sliderItems.length) : 0;
+    const heroNews = sliderItems[currentHeroIndex] || list[0];
     const streamNews = list.filter(n => n.id !== heroNews?.id);
     const topReadNews = [...newsList].sort((a, b) => b.views - a.views).slice(0, 5);
+    const breakingNews = newsList.find(n => n.isTrending) || newsList[0];
 
     return `
       <div class="desktop-home-layout">
         <!-- Chap / Markaziy Asosiy Ustun -->
         <div class="desktop-main-column">
-          <!-- 1. Katta Hero Slayder Kartasi -->
+          <!-- 1. Tezkor Lenta (Breaking News Ticker) -->
+          ${breakingNews && !this.searchQuery ? `
+            <div class="breaking-news-ticker-bar" data-open-id="${breakingNews.id}" title="Xabarni o‘qish">
+              <div class="ticker-badge">
+                <span class="ticker-flame">${Icons.flame}</span>
+                <span>TEZKOR</span>
+              </div>
+              <div class="ticker-content">
+                <span class="ticker-text">${breakingNews.title}</span>
+                <span class="ticker-time">${Icons.clock} ${breakingNews.time}</span>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- 2. Qidiruv Faol Bo'lsa Natijalar Paneli -->
+          ${this.searchQuery ? `
+            <div class="search-results-banner">
+              <div class="search-results-info">
+                <span>${Icons.search}</span>
+                <span>Qidiruv: <b>"${this.searchQuery}"</b> (${list.length} ta xabar)</span>
+              </div>
+              <button class="search-results-reset" id="resetSearchQueryBtn">✕ Tozalash</button>
+            </div>
+          ` : ''}
+
+          <!-- 3. Katta Hero Slayder Kartasi -->
           ${heroNews ? `
             <div class="hero-card-banner" data-open-id="${heroNews.id}">
               <img class="hero-card-img" src="${heroNews.imageUrl}" alt="${heroNews.title}" />
@@ -454,69 +542,52 @@ class AntivirusApp {
                   <div class="hero-meta-left">
                     <span>${Icons.clock} ${heroNews.time}</span>
                     <span>${Icons.calendar} ${heroNews.date}</span>
-                    <span>${Icons.eye} ${heroNews.views.toLocaleString()}</span>
+                    <span>${Icons.eye} ${(heroNews.views || 0).toLocaleString()}</span>
                   </div>
-                  <div class="hero-dots-row">
-                    <span class="hero-dot-active"></span>
-                    <span class="hero-dot-normal"></span>
-                    <span class="hero-dot-normal"></span>
-                    <span class="hero-dot-normal"></span>
-                  </div>
+                  ${sliderItems.length > 1 ? `
+                    <div class="hero-dots-row" onclick="event.stopPropagation();">
+                      ${sliderItems.map((s, idx) => `
+                        <button class="hero-dot-btn ${idx === currentHeroIndex ? 'active' : ''}" data-slide-index="${idx}" title="${s.title}"></button>
+                      `).join('')}
+                    </div>
+                  ` : ''}
                 </div>
               </div>
             </div>
           ` : ''}
 
-          <!-- 2. 6 ta Tezkor Toifa Tugmalari -->
-          <div class="quick-categories-grid">
-            <div class="quick-cat-box ${this.selectedCategory === 'siyosat' ? 'active' : ''}" data-cat-select="siyosat">
-              <div class="quick-cat-icon" style="color: #E50914;">${Icons.landmark}</div>
-              <span class="quick-cat-label">Siyosat</span>
+          <!-- 4. Bo'sh Holat (Agar qidiruv natijasi topilmasa) -->
+          ${list.length === 0 ? `
+            <div class="empty-state-card">
+              <div class="empty-state-icon">🔍</div>
+              <h3 class="empty-state-title">Hech qanday yangilik topilmadi</h3>
+              <p class="empty-state-desc">"${this.searchQuery}" so‘rovi bo‘yicha hech qanday xabar chiqmadi. Boshqa so‘z bilan qidirib ko‘ring yoki barcha yangiliklarga qayting.</p>
+              <button class="btn-primary-red" id="resetSearchQueryBtn2" style="max-width: 240px; margin: 0 auto;">Barcha yangiliklarga qaytish</button>
             </div>
-            <div class="quick-cat-box ${this.selectedCategory === 'dunyo' ? 'active' : ''}" data-cat-select="dunyo">
-              <div class="quick-cat-icon" style="color: #2563EB;">${Icons.globe}</div>
-              <span class="quick-cat-label">Dunyo</span>
+          ` : `
+            <!-- 5. So'nggi Yangiliklar Ro'yxati -->
+            <div class="section-headline-bar">
+              <h2 class="headline-text">
+                ${this.selectedCategory !== 'all' ? `${store.getCategoryName(this.selectedCategory)} yangiliklari` : (this.searchQuery ? 'Topilgan natijalar' : 'So‘nggi yangiliklar')}
+              </h2>
+              <span class="headline-link-more" data-tab-link="menu">Barchasi ${Icons.chevronRight}</span>
             </div>
-            <div class="quick-cat-box ${this.selectedCategory === 'jamiyat' ? 'active' : ''}" data-cat-select="jamiyat">
-              <div class="quick-cat-icon" style="color: #DC2626;">${Icons.users}</div>
-              <span class="quick-cat-label">Jamiyat</span>
-            </div>
-            <div class="quick-cat-box ${this.selectedCategory === 'biznes' ? 'active' : ''}" data-cat-select="biznes">
-              <div class="quick-cat-icon" style="color: #EA580C;">${Icons.barChart}</div>
-              <span class="quick-cat-label">Biznes</span>
-            </div>
-            <div class="quick-cat-box ${this.selectedCategory === 'sport' ? 'active' : ''}" data-cat-select="sport">
-              <div class="quick-cat-icon" style="color: #16A34A;">${Icons.trophy}</div>
-              <span class="quick-cat-label">Sport</span>
-            </div>
-            <div class="quick-cat-box" data-tab-link="menu">
-              <div class="quick-cat-icon" style="color: #94A3B8;">${Icons.grid}</div>
-              <span class="quick-cat-label">Barchasi</span>
-            </div>
-          </div>
 
-          <!-- 3. So'nggi Yangiliklar Ro'yxati -->
-          <div class="section-headline-bar">
-            <h2 class="headline-text">
-              ${this.searchQuery ? `Qidiruv: "${this.searchQuery}"` : 'So‘nggi yangiliklar'}
-            </h2>
-            <span class="headline-link-more" data-tab-link="menu">Barchasi ${Icons.chevronRight}</span>
-          </div>
-
-          <div class="news-stream-container">
-            ${streamNews.map(n => `
-              <div class="news-item-card" data-open-id="${n.id}">
-                <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
-                <div class="news-item-details">
-                  <h4 class="news-item-title">${n.title}</h4>
-                  <div class="news-item-meta">
-                    <span>${Icons.clock} ${n.time}</span>
-                    <span>${Icons.eye} ${n.views.toLocaleString()}</span>
+            <div class="news-stream-container">
+              ${streamNews.map(n => `
+                <div class="news-item-card" data-open-id="${n.id}">
+                  <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
+                  <div class="news-item-details">
+                    <h4 class="news-item-title">${n.title}</h4>
+                    <div class="news-item-meta">
+                      <span>${Icons.clock} ${n.time}</span>
+                      <span>${Icons.eye} ${(n.views || 0).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            `).join('')}
-          </div>
+              `).join('')}
+            </div>
+          `}
         </div>
 
         <!-- O'ng Yon Panel (Faqat Kompyuter / Desktop ekranda ko'rinadi) -->
@@ -604,13 +675,38 @@ class AntivirusApp {
   // -------------------------------------------------------------
   renderMenuView() {
     const categories = store.getCategories();
-    const isCfConnected = store.isCloudflareConnected();
+    const savedCount = store.getSavedIds().length;
 
     return `
       <div class="menu-view-screen">
         <div class="menu-screen-header">
           <h1 class="menu-screen-title">Barchasi</h1>
-          <button class="icon-btn" id="menuSearchBtn">${Icons.search}</button>
+          <button class="icon-btn" id="menuSearchBtn" title="Qidiruv">${Icons.search}</button>
+        </div>
+
+        <!-- Tezkor amallar kartalari (Saqlanganlar va APK) -->
+        <div class="menu-quick-action-cards">
+          <div class="menu-action-card" data-tab-link="saved">
+            <div class="menu-action-icon" style="color: #F59E0B; background: rgba(245, 158, 11, 0.12);">
+              ${Icons.bookmark}
+            </div>
+            <div class="menu-action-info">
+              <span class="menu-action-title">Saqlangan xabarlar</span>
+              <span class="menu-action-sub">${savedCount} ta maqola saqlangan</span>
+            </div>
+            <span class="cat-row-chevron">${Icons.chevronRight}</span>
+          </div>
+
+          <a href="/download/antivirus-news.apk" class="menu-action-card" download>
+            <div class="menu-action-icon" style="color: var(--an-red); background: rgba(229, 9, 20, 0.12);">
+              📱
+            </div>
+            <div class="menu-action-info">
+              <span class="menu-action-title">Android Ilova (.APK)</span>
+              <span class="menu-action-sub">Tezkor o‘rnatish (1.2 MB)</span>
+            </div>
+            <span class="cat-row-chevron">${Icons.chevronRight}</span>
+          </a>
         </div>
 
         <!-- 11 ta Bo'limlar Ro'yxati -->
@@ -640,27 +736,75 @@ class AntivirusApp {
 
         <!-- 4 ta Doiraviy Ijtimoiy Tarmoq -->
         <div class="social-icons-row">
-          <div class="social-round-btn" onclick="window.open('https://t.me', '_blank')">
+          <a href="https://t.me" target="_blank" rel="noopener noreferrer" class="social-round-btn">
             <div class="social-circle-wrap sn-telegram">${Icons.telegram}</div>
             <span class="social-label">Telegram</span>
-          </div>
+          </a>
 
-          <div class="social-round-btn" onclick="window.open('https://youtube.com', '_blank')">
+          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="social-round-btn">
             <div class="social-circle-wrap sn-youtube">${Icons.youtube}</div>
             <span class="social-label">YouTube</span>
-          </div>
+          </a>
 
-          <div class="social-round-btn" onclick="window.open('https://tiktok.com', '_blank')">
+          <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="social-round-btn">
             <div class="social-circle-wrap sn-tiktok">${Icons.tiktok}</div>
             <span class="social-label">TikTok</span>
-          </div>
+          </a>
 
-          <div class="social-round-btn" onclick="window.open('https://instagram.com', '_blank')">
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="social-round-btn">
             <div class="social-circle-wrap sn-instagram">${Icons.instagram}</div>
             <span class="social-label">Instagram</span>
-          </div>
+          </a>
         </div>
       </div>
+    `;
+  }
+
+  // -------------------------------------------------------------
+  // TAB: SAQLANGAN XABARLAR (BOOKMARKS) EKRANI
+  // -------------------------------------------------------------
+  renderSavedView() {
+    const savedIds = store.getSavedIds();
+    const allNews = store.getNews();
+    const savedList = allNews.filter(n => savedIds.includes(n.id));
+
+    return `
+      <div class="section-headline-bar">
+        <h2 class="headline-text" style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #F59E0B;">${Icons.bookmark}</span> Saqlangan xabarlar
+        </h2>
+        <span style="font-size: 11px; color: var(--text-dim);">${savedList.length} ta maqola</span>
+      </div>
+
+      ${savedList.length === 0 ? `
+        <div class="empty-state-card">
+          <div class="empty-state-icon">🔖</div>
+          <h3 class="empty-state-title">Saqlangan xabarlar mavjud emas</h3>
+          <p class="empty-state-desc">Maqolalarni o‘qish oynasida "Saqlash" tugmasini bosib, keyinroq o‘qish uchun shu yerga saqlab qo‘yishingiz mumkin.</p>
+          <button class="btn-primary-red" data-tab-link="home" style="max-width: 240px; margin: 0 auto;">Bosh sahifaga o‘tish</button>
+        </div>
+      ` : `
+        <div class="news-stream-container">
+          ${savedList.map(n => `
+            <div class="news-item-card" data-open-id="${n.id}">
+              <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" />
+              <div class="news-item-details">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                  <span class="hero-tag-badge" style="font-size: 9.5px; padding: 2px 7px;">${n.categoryName}</span>
+                  <span style="font-size: 10px; color: var(--text-dim); margin-left: auto;">${n.time}</span>
+                </div>
+                <h4 class="news-item-title">${n.title}</h4>
+                <div class="news-item-meta" style="margin-top: auto;">
+                  <span>${Icons.eye} ${(n.views || 0).toLocaleString()}</span>
+                  <button class="remove-saved-quick-btn" data-remove-saved="${n.id}" title="Saqlanganlardan o‘chirish" style="margin-left: auto; background: none; border: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center;">
+                    ${Icons.trash}
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
     `;
   }
 
@@ -1386,30 +1530,101 @@ class AntivirusApp {
       this.toggleTheme();
     });
 
-    // 2. Qidiruv lupasi (Maxfiy: "admin" deb yozilsa, admin boshqaruv oynasi ochiladi)
-    const handleSearch = () => {
-      const q = prompt('Qidirmoqchi bo‘lgan yangilikni kiriting:');
-      if (q !== null) {
-        const trimmed = q.trim();
+    // 2. Interaktiv Qidiruv Satri
+    const triggerSearch = () => {
+      this.isSearchOpen = !this.isSearchOpen;
+      this.isNotifOpen = false;
+      this.render();
+      if (this.isSearchOpen) {
+        setTimeout(() => {
+          const input = document.getElementById('headerSearchInput');
+          input?.focus();
+        }, 50);
+      }
+    };
+    document.getElementById('searchTriggerBtn')?.addEventListener('click', triggerSearch);
+    document.getElementById('menuSearchBtn')?.addEventListener('click', () => {
+      this.isSearchOpen = true;
+      this.isNotifOpen = false;
+      this.render();
+      setTimeout(() => {
+        const input = document.getElementById('headerSearchInput');
+        input?.focus();
+      }, 50);
+    });
+
+    const searchInput = document.getElementById('headerSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const val = e.target.value;
+        const trimmed = val.trim();
         if (trimmed.toLowerCase() === 'admin' || trimmed.toLowerCase() === '/admin' || trimmed.toLowerCase() === 'baza') {
+          this.isSearchOpen = false;
           this.openCfModal('stats');
           return;
         }
         this.searchQuery = trimmed;
-        this.setTab('home');
-      }
-    };
-    document.getElementById('searchTriggerBtn')?.addEventListener('click', handleSearch);
-    document.getElementById('menuSearchBtn')?.addEventListener('click', handleSearch);
-    document.getElementById('desktopAdminBtn')?.addEventListener('click', () => {
-      this.openCfModal('stats');
+        clearTimeout(this.searchDebounceTimer);
+        this.searchDebounceTimer = setTimeout(() => {
+          if (this.currentTab !== 'home') this.currentTab = 'home';
+          this.render();
+          const newInput = document.getElementById('headerSearchInput');
+          if (newInput) {
+            newInput.focus();
+            newInput.setSelectionRange(newInput.value.length, newInput.value.length);
+          }
+        }, 220);
+      });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          this.isSearchOpen = false;
+          this.searchQuery = '';
+          this.render();
+        }
+      });
+    }
+
+    document.getElementById('headerSearchClearBtn')?.addEventListener('click', () => {
+      this.searchQuery = '';
+      this.render();
+      setTimeout(() => {
+        const input = document.getElementById('headerSearchInput');
+        input?.focus();
+      }, 50);
     });
 
-    // 3. Bildirishnomalar
-    document.getElementById('notifBellBtn')?.addEventListener('click', () => {
-      const notifs = store.getNotifications();
-      const msg = notifs.map(n => `• ${n.title}: ${n.text}`).join('\n\n');
-      alert(`🔔 ANTIVIRUS NEWS:\n\n${msg || 'Yangi bildirishnomalar yo‘q'}`);
+    document.getElementById('resetSearchQueryBtn')?.addEventListener('click', () => {
+      this.searchQuery = '';
+      this.render();
+    });
+    document.getElementById('resetSearchQueryBtn2')?.addEventListener('click', () => {
+      this.searchQuery = '';
+      this.render();
+    });
+
+    // 3. Zamonaviy Bildirishnomalar Paneli
+    document.getElementById('notifBellBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.isNotifOpen = !this.isNotifOpen;
+      this.isSearchOpen = false;
+      this.render();
+    });
+
+    document.getElementById('notifMarkAllReadBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const notifs = store.getNotifications().map(n => ({ ...n, read: true }));
+      localStorage.setItem('antivirus_notifications', JSON.stringify(notifs));
+      this.showToast('✅ Barcha bildirishnomalar o‘qildi');
+      this.render();
+    });
+
+    // Tashqariga bosilganda bildirishnomalarni yopish
+    document.addEventListener('click', (e) => {
+      if (this.isNotifOpen && !e.target.closest('#notifDropdown') && !e.target.closest('#notifBellBtn')) {
+        this.isNotifOpen = false;
+        this.render();
+      }
     });
 
     // 5. Cloudflare Modalini Yopish
@@ -1978,6 +2193,31 @@ class AntivirusApp {
     document.getElementById('articleShareBtn')?.addEventListener('click', () => {
       const art = store.getNewsById(this.activeArticleId);
       if (art) this.shareArticle(art);
+    });
+
+    // 18. Hero Slayder nuqtalarini bosish
+    document.querySelectorAll('[data-slide-index]').forEach(dot => {
+      dot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(e.currentTarget.getAttribute('data-slide-index'), 10);
+        if (!isNaN(idx)) {
+          this.heroSlideIndex = idx;
+          this.render();
+        }
+      });
+    });
+
+    // 19. Saqlangan xabarlardan tezkor o'chirish
+    document.querySelectorAll('[data-remove-saved]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = e.currentTarget.getAttribute('data-remove-saved');
+        if (id) {
+          store.toggleSaveNews(id);
+          this.showToast('🗑️ Maqola saqlanganlardan olindi');
+          this.render();
+        }
+      });
     });
   }
 }

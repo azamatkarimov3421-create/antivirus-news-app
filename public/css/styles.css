@@ -208,6 +208,7 @@ button {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  position: relative;
 }
 
 /* Kompyuter Ekrani uchun To'g'ridan-to'g'ri APK Yuklab Olish Tugmasi */
@@ -245,6 +246,8 @@ button {
   justify-content: center;
   color: var(--text-main);
   transition: transform 0.15s ease, background 0.15s ease;
+  position: relative;
+  cursor: pointer;
 }
 
 .icon-btn:hover {
@@ -254,6 +257,375 @@ button {
 
 .icon-btn:active {
   transform: scale(0.92);
+}
+
+.notif-badge-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--an-red);
+  box-shadow: 0 0 8px var(--an-red-glow);
+  border: 1.5px solid var(--bg-card);
+}
+
+/* Interaktiv Qidiruv Satri */
+.header-search-drawer {
+  width: 100%;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+  padding: 0 18px;
+}
+
+.header-search-drawer.open {
+  max-height: 70px;
+  opacity: 1;
+  padding: 10px 18px;
+}
+
+.search-input-wrap {
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-input-field {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 10px 42px 10px 40px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input-field:focus {
+  border-color: var(--an-red);
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.15);
+}
+
+.search-inside-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-dim);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.search-inside-clear {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.search-inside-clear:hover {
+  color: var(--an-red);
+}
+
+/* Zamonaviy Bildirishnomalar Paneli (Dropdown) */
+.notifications-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  animation: notifFadeIn 0.2s ease;
+}
+
+.notifications-dropdown-menu.open {
+  display: flex;
+}
+
+@keyframes notifFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.notif-dropdown-header h4 {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.notif-mark-read-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--an-red);
+  cursor: pointer;
+}
+
+.notif-items-list {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-card-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+.notif-card-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.notif-card-item.unread {
+  background: rgba(229, 9, 20, 0.04);
+}
+
+.notif-card-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--an-red);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.notif-card-item.read .notif-card-dot {
+  background: transparent;
+}
+
+.notif-card-content {
+  flex: 1;
+}
+
+.notif-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.notif-card-text {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.notif-card-time {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Tezkor Lenta (Breaking News Ticker) */
+.breaking-news-ticker-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 7px 14px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.breaking-news-ticker-bar:hover {
+  background: var(--bg-card);
+  border-color: var(--an-red);
+}
+
+.ticker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--an-red);
+  color: #FFFFFF;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px var(--an-red-glow);
+}
+
+.ticker-flame {
+  display: flex;
+  align-items: center;
+  animation: flamePulse 1.5s infinite;
+}
+
+@keyframes flamePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.ticker-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.ticker-text {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticker-time {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Qidiruv holati paneli va Bo'sh holat */
+.search-results-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(229, 9, 20, 0.08);
+  border: 1px solid rgba(229, 9, 20, 0.2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.search-results-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-main);
+}
+
+.search-results-reset {
+  background: var(--an-red);
+  color: #FFF;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.empty-state-card {
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  margin-bottom: 24px;
+}
+
+.empty-state-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+.empty-state-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.empty-state-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 440px;
+  margin: 0 auto 18px;
+  line-height: 1.5;
+}
+
+/* Hero Slider Dots */
+.hero-dots-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.hero-dot-btn {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.hero-dot-btn.active {
+  width: 22px;
+  border-radius: 6px;
+  background: var(--an-red);
+  box-shadow: 0 0 8px var(--an-red-glow);
+}
+
+.remove-saved-quick-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.remove-saved-quick-btn:hover {
+  color: var(--an-red) !important;
+  background: rgba(229, 9, 20, 0.1);
 }
 
 /* ==========================================================================
@@ -415,53 +787,7 @@ button {
   background: rgba(255, 255, 255, 0.45);
 }
 
-/* --------------------------------------------------------------------------
-   2. 6 TA TEZKOR TOIFA TUGMALARI (Siyosat, Dunyo, Jamiyat, Biznes, Sport, Barchasi)
-   -------------------------------------------------------------------------- */
-.quick-categories-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  margin-bottom: 22px;
-}
 
-.quick-cat-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 2px;
-  border-radius: 14px;
-  background: var(--bg-pill);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease;
-}
-
-.quick-cat-box:active {
-  transform: scale(0.93);
-}
-
-.quick-cat-box.active {
-  background: var(--bg-pill-active) !important;
-  color: var(--pill-active-color) !important;
-}
-
-.quick-cat-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.quick-cat-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
-}
 
 /* --------------------------------------------------------------------------
    3. SO'NGGI YANGILIKLAR RO'YXATI
@@ -562,6 +888,68 @@ button {
   font-size: 20px;
   font-weight: 900;
   color: var(--text-main);
+}
+
+/* Tezkor amallar kartalari (Saqlanganlar va APK) */
+.menu-quick-action-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .menu-quick-action-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.menu-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.menu-action-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.menu-action-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.menu-action-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-action-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.menu-action-sub {
+  font-size: 11px;
+  color: var(--text-dim);
 }
 
 .categories-vertical-stack {
@@ -669,6 +1057,8 @@ button {
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
 .social-circle-wrap {
@@ -2278,28 +2668,7 @@ button {
     padding: 4px 10px !important;
   }
 
-  /* 6 ta Tezkor Toifa Tugmalari */
-  .quick-categories-grid {
-    gap: 12px !important;
-    margin-bottom: 28px !important;
-  }
 
-  .quick-cat-box {
-    padding: 14px 4px !important;
-    border-radius: 16px !important;
-    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease !important;
-  }
-
-  .quick-cat-box:hover {
-    background: var(--bg-card-hover) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-
-  .quick-cat-label {
-    font-size: 11px !important;
-    font-weight: 800 !important;
-  }
 
   /* Yangiliklar Oqimi: 2 Ustunli zamonaviy grid */
   .news-stream-container {

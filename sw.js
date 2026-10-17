@@ -76,7 +76,9 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
         }
         return networkRes;
-      }).catch(() => null);
+      }).catch(() => {
+        return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
+      });
 
       return cached || fetchPromise;
     })
