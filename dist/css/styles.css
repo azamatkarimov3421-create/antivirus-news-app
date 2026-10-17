@@ -811,68 +811,98 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 12px 18px;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 0;
-  z-index: 25;
+  z-index: 30;
+  gap: 12px;
 }
 
+.modal-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.video-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(229, 9, 20, 0.12);
+  color: var(--an-red);
+  letter-spacing: 0.5px;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--an-red);
+  animation: pulseDot 1.5s infinite;
+}
+
+@keyframes pulseDot {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.article-mode-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+/* Kichik | Standart | Katta | To'liq Segmented Switch */
 .modal-size-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.modal-size-tag {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-dim);
-  margin-right: 2px;
+  background: var(--bg-pill);
+  padding: 3px;
+  border-radius: 12px;
+  gap: 2px;
 }
 
 .modal-size-btn {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: var(--bg-pill);
+  padding: 6px 14px;
+  border-radius: 9px;
+  background: transparent;
   color: var(--text-muted);
-  transition: all 0.15s ease;
   cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .modal-size-btn:hover {
-  background: var(--an-red);
-  color: #FFF;
+  color: var(--text-main);
 }
 
 .modal-size-btn.active {
   background: var(--an-red) !important;
-  color: #FFF !important;
+  color: #FFFFFF !important;
   box-shadow: 0 2px 8px var(--an-red-glow);
 }
 
-/* Modal o'lcham rejimlari: Kichik / Standart / Kengaytirilgan / To'liq ekran */
+/* Modal o'lcham rejimlari: Kichik / Standart / Katta (Kino) / To'liq ekran */
 .article-reader-modal.modal-size-compact {
   max-width: 640px !important;
 }
 
 .article-reader-modal.modal-size-normal {
-  max-width: 820px !important;
+  max-width: 860px !important;
 }
 
 .article-reader-modal.modal-size-theater {
   max-width: 95vw !important;
   width: 95vw !important;
-  max-height: 95vh !important;
-}
-
-.article-reader-modal.modal-size-theater .media-ambient-wrapper {
-  max-height: 68vh !important;
-  min-height: 480px !important;
+  max-height: 96vh !important;
 }
 
 .article-reader-modal.modal-size-fullscreen {
@@ -900,6 +930,74 @@ button {
 .modal-window-header .close-modal-round:hover {
   background: var(--an-red);
   color: #FFF;
+}
+
+/* YouTube Toza 16:9 Cinema Frame — Qora hoshiyalarsiz va buzilmasdan */
+.youtube-cinema-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  margin-bottom: 16px;
+}
+
+.youtube-cinema-iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Mahalliy va MP4 Video Cinema Frame */
+.local-cinema-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.local-clean-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Rasmli Xabar Frame */
+.article-photo-frame {
+  width: 100%;
+  max-height: 520px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: var(--bg-card);
+}
+
+.article-clean-photo {
+  width: 100%;
+  height: 100%;
+  max-height: 520px;
+  object-fit: cover;
+  display: block;
+}
+
+.embed-social-wrap {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
 }
 
 .article-media-cover {
