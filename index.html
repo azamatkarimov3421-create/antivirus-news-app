@@ -24,6 +24,15 @@
 
   <!-- Favicon / AN Brand Mark -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23E50914'/%3E%3Ctext x='50' y='65' font-family='sans-serif' font-size='42' font-weight='900' fill='white' text-anchor='middle'%3EAN%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+
+  <!-- PWA & Google Play Store (TWA) Meta Teglar -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#E50914">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ANTIVIRUS">
 
   <!-- Shriftlar (Google Fonts) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,5 +48,16 @@
 
   <!-- Skriptlar -->
   <script type="module" src="js/app.js"></script>
+
+  <!-- Service Worker (PWA & Offline Rejim) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('✅ ServiceWorker faol:', reg.scope))
+          .catch(err => console.warn('ServiceWorker ogohlantirish:', err));
+      });
+    }
+  </script>
 </body>
 </html>

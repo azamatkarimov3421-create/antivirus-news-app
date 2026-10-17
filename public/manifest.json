@@ -1,0 +1,75 @@
+{
+  "id": "com.antivirusnews.app",
+  "name": "ANTIVIRUS NEWS — Global Yangiliklar",
+  "short_name": "ANTIVIRUS",
+  "description": "Global siyosat oddiy tilda. O‘zbekiston va dunyodagi eng so‘nggi, tezkor va ishonchli yangiliklar, video reportajlar hamda tahliliy maqolalar.",
+  "start_url": "/?utm_source=playstore",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0A0A0C",
+  "theme_color": "#E50914",
+  "categories": ["news", "magazines"],
+  "lang": "uz",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Video Yangiliklar",
+      "short_name": "Videolar",
+      "description": "Eng so‘nggi video reportajlarni ko‘rish",
+      "url": "/?tab=video",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Trend Yangiliklar",
+      "short_name": "Trend",
+      "description": "Ommabop va trenddagi xabarlar",
+      "url": "/?tab=trend",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1080&q=80",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "ANTIVIRUS NEWS — Mobil Yangiliklar Tasmasi"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80",
+      "sizes": "1200x800",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "ANTIVIRUS NEWS — Keng Ekran va Video Pleyer"
+    }
+  ]
+}

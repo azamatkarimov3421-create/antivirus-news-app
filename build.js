@@ -22,7 +22,17 @@ function copyRecursiveSync(src, dest) {
   }
 }
 
-const itemsToCopy = ['index.html', 'css', 'js', 'assets', 'vercel.json'];
+const itemsToCopy = [
+  'index.html',
+  'css',
+  'js',
+  'assets',
+  'manifest.json',
+  'sw.js',
+  'privacy.html',
+  '.well-known',
+  'vercel.json'
+];
 
 // Ham public, ham dist papkalarini yaratish va to'ldirish
 const targets = [
