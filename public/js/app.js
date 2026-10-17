@@ -194,6 +194,19 @@ class AntivirusApp {
     this.render();
   }
 
+  setArticleModalSize(size) {
+    this.articleModalSize = size;
+    const modal = document.getElementById('articleReaderModal');
+    if (modal) {
+      modal.classList.remove('modal-size-normal', 'modal-size-theater', 'modal-size-compact', 'modal-size-fullscreen');
+      modal.classList.add(`modal-size-${size}`);
+    }
+    const btnNormal = document.getElementById('modalSizeNormal');
+    const btnTheater = document.getElementById('modalSizeTheater');
+    if (btnNormal) btnNormal.classList.toggle('active', size === 'normal');
+    if (btnTheater) btnTheater.classList.toggle('active', size === 'theater');
+  }
+
   openCfModal(tab = 'stats') {
     this.isCfModalOpen = true;
     this.cfActiveTab = tab;
@@ -904,19 +917,13 @@ class AntivirusApp {
               `}
             </div>
 
-            <!-- Segmented Switch: Kichik | Standart | Katta (Kino) | To'liq -->
+            <!-- Segmented Switch: Standart | Katta Kino -->
             <div class="modal-size-controls">
-              <button class="modal-size-btn ${this.articleModalSize === 'compact' ? 'active' : ''}" id="modalSizeCompact" title="Kichiklashtirish">
-                Kichik
+              <button class="modal-size-btn ${this.articleModalSize === 'normal' ? 'active' : ''}" id="modalSizeNormal" title="Standart o‘lcham (840px)">
+                📺 Standart
               </button>
-              <button class="modal-size-btn ${this.articleModalSize === 'normal' ? 'active' : ''}" id="modalSizeNormal" title="Standart o‘lcham">
-                Standart
-              </button>
-              <button class="modal-size-btn ${this.articleModalSize === 'theater' ? 'active' : ''}" id="modalSizeTheater" title="Kattalashtirish (Katta Kino Rejimi)">
-                Katta (Kino)
-              </button>
-              <button class="modal-size-btn ${this.articleModalSize === 'fullscreen' ? 'active' : ''}" id="modalSizeFullscreen" title="Butun ekranga ochish">
-                ⛶ To‘liq
+              <button class="modal-size-btn ${this.articleModalSize === 'theater' ? 'active' : ''}" id="modalSizeTheater" title="Katta kino rejimi (1060px)">
+                🎬 Katta kino
               </button>
             </div>
 
@@ -1898,48 +1905,12 @@ class AntivirusApp {
       if (e.target.id === 'articleBackdrop') this.closeArticle();
     });
 
-    // 14a. Oyna o'lchamini o'zgartirish (Kichiklashtirish / Standart / Kengaytirish / To'liq ekran)
-    document.getElementById('modalSizeCompact')?.addEventListener('click', () => {
-      this.articleModalSize = 'compact';
-      this.render();
-    });
+    // 14a. Oyna o'lchamini o'zgartirish (Standart / Katta Kino) - Videoni to'xtatmasdan silliq o'tadi
     document.getElementById('modalSizeNormal')?.addEventListener('click', () => {
-      this.articleModalSize = 'normal';
-      this.render();
+      this.setArticleModalSize('normal');
     });
     document.getElementById('modalSizeTheater')?.addEventListener('click', () => {
-      this.articleModalSize = this.articleModalSize === 'theater' ? 'normal' : 'theater';
-      this.render();
-    });
-    document.getElementById('modalSizeFullscreen')?.addEventListener('click', () => {
-      const modal = document.getElementById('articleReaderModal');
-      if (modal) {
-        if (!document.fullscreenElement) {
-          modal.requestFullscreen?.().catch(() => {});
-          this.articleModalSize = 'fullscreen';
-        } else {
-          document.exitFullscreen?.().catch(() => {});
-          this.articleModalSize = 'normal';
-        }
-        this.render();
-      }
-    });
-
-    // 14b. Video nisbatini (Aspect Ratio) o'zgartirish
-    document.querySelectorAll('[data-set-ratio]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const ratio = e.currentTarget.getAttribute('data-set-ratio');
-        if (ratio) {
-          this.currentVideoRatio = ratio;
-          this.render();
-        }
-      });
-    });
-
-    // 14c. Videoni to'liq sig'dirish (contain) yoki to'ldirish (cover)
-    document.getElementById('vCoverToggleBtn')?.addEventListener('click', () => {
-      this.isVideoFitCover = !this.isVideoFitCover;
-      this.render();
+      this.setArticleModalSize(this.articleModalSize === 'theater' ? 'normal' : 'theater');
     });
 
     // 14d. Video ijro tezligi (Playback Rate)
