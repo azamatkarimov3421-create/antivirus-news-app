@@ -314,9 +314,10 @@ class NewsStore {
 
   getCategories() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES)) || INITIAL_CATEGORIES;
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES)) || INITIAL_CATEGORIES;
+      return stored.filter(c => c.id !== 'trend');
     } catch {
-      return INITIAL_CATEGORIES;
+      return INITIAL_CATEGORIES.filter(c => c.id !== 'trend');
     }
   }
 

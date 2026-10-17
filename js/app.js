@@ -160,13 +160,8 @@ class AntivirusApp {
   }
 
   setCategory(catId) {
-    if (catId === 'trend') {
-      this.selectedCategory = 'trend';
-      this.setTab('trend');
-      return;
-    }
     this.selectedCategory = catId;
-    if (this.currentTab === 'menu' || this.currentTab === 'trend') {
+    if (this.currentTab !== 'home') {
       this.currentTab = 'home';
     }
     this.render();
@@ -174,9 +169,7 @@ class AntivirusApp {
 
   setTab(tab) {
     this.currentTab = tab;
-    if (tab === 'trend') {
-      this.selectedCategory = 'trend';
-    } else if (tab === 'home' && this.selectedCategory === 'trend') {
+    if (tab === 'home' && this.selectedCategory === 'trend') {
       this.selectedCategory = 'all';
     }
     this.activeArticleId = null;
@@ -549,8 +542,8 @@ class AntivirusApp {
           </div>
         </div>
 
-        <!-- 2. Gorizontal Toifalar (Swipeable Tabs) -->
-        ${this.currentTab !== 'menu' && this.currentTab !== 'saved' ? this.renderCategoryTabs(categories) : ''}
+        <!-- 2. Gorizontal Toifalar (Faqat Asosiy sahifada) -->
+        ${this.currentTab === 'home' ? this.renderCategoryTabs(categories) : ''}
 
         <!-- 3. Asosiy Tana (Body) -->
         <main class="main-view-body">
@@ -604,14 +597,15 @@ class AntivirusApp {
 
   // Gorizontal toifalar tasmasi
   renderCategoryTabs(categories) {
+    const list = categories.filter(c => c.id !== 'all' && c.id !== 'trend');
     return `
       <div class="category-tabs-container">
         <nav class="category-tabs-bar">
-          <div class="cat-tab-item ${this.selectedCategory === 'all' && this.currentTab !== 'trend' ? 'active' : ''}" data-cat-select="all">
+          <div class="cat-tab-item ${this.selectedCategory === 'all' ? 'active' : ''}" data-cat-select="all">
             Barchasi
           </div>
-          ${categories.filter(c => c.id !== 'all').map(c => `
-            <div class="cat-tab-item ${(this.selectedCategory === c.id || (c.id === 'trend' && this.currentTab === 'trend')) ? 'active' : ''}" data-cat-select="${c.id}">
+          ${list.map(c => `
+            <div class="cat-tab-item ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-select="${c.id}">
               ${c.name}
             </div>
           `).join('')}
@@ -967,35 +961,144 @@ class AntivirusApp {
   }
 
   // -------------------------------------------------------------
-  // TAB 3: TRENDLAR EKRANI
+  // TAB 3: TRENDLAR EKRANI (Eng ko'p o'qilganlar reytingi)
   // -------------------------------------------------------------
   renderTrendView() {
     const list = store.getTrendingNews();
+    if (list.length === 0) {
+      return `
+        <div class="empty-state-card" style="margin-top: 40px;">
+          <div class="empty-state-icon">🔥</div>
+          <h3 class="empty-state-title">Trenddagi xabarlar topilmadi</h3>
+          <p class="empty-state-desc">Hozircha xabarlar yetarli emas.</p>
+        </div>
+      `;
+    }
+
+    const top1 = list[0];
+    const remaining = list.slice(1);
 
     return `
-      <div class="section-headline-bar">
-        <h2 class="headline-text" style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: var(--an-red);">${Icons.trendingUp}</span> Trenddagi xabarlar
-        </h2>
-        <span style="font-size: 11px; color: var(--text-dim);">Eng ko‘p o‘qilgan</span>
-      </div>
-
-      <div class="news-stream-container">
-        ${list.map((n, i) => `
-          <div class="news-item-card" data-open-id="${n.id}">
-            <div style="font-size: 18px; font-weight: 900; color: ${i < 3 ? 'var(--an-red)' : 'var(--text-dim)'}; width: 26px; display: flex; align-items: center; justify-content: center;">
-              #${i + 1}
+      <div class="desktop-home-layout">
+        <!-- Chap Asosiy Ustun -->
+        <div class="desktop-main-column">
+          <!-- 1. Trend Sarlavhasi -->
+          <div class="trend-hero-header">
+            <div class="trend-header-badge">
+              <span class="flame-pulse-icon">🔥</span>
+              <span>TOP TRENDLAR</span>
             </div>
-            <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" />
-            <div class="news-item-details">
-              <h4 class="news-item-title">${n.title}</h4>
-              <div class="news-item-meta">
-                <span>${Icons.clock} ${n.time}</span>
-                <span>${Icons.eye} ${n.views.toLocaleString()}</span>
+            <h1 class="trend-main-heading">Eng ko‘p o‘qilgan yangiliklar</h1>
+            <p class="trend-sub-heading">Real vaqt rejimida o‘quvchilar tomonidan eng ko‘p ko‘rilgan va ommabop xabarlar reytingi</p>
+          </div>
+
+          <!-- 2. #1 Grand Trend Kartasi (Mutlaq yetakchi xabar) -->
+          ${top1 ? `
+            <div class="trend-hero-card" data-open-id="${top1.id}">
+              <div class="trend-hero-img-box">
+                <img src="${top1.imageUrl}" alt="${top1.title}" class="trend-hero-img" loading="eager" />
+                <div class="hero-card-gradient"></div>
+
+                <div class="trend-hero-top-badges">
+                  <span class="trend-crown-badge">🏆 #1 ENG OMMABOP</span>
+                  <span class="trend-views-glow-pill">${Icons.eye} ${(top1.views || 0).toLocaleString()} ko‘rildi</span>
+                </div>
+
+                <div class="trend-hero-content">
+                  <span class="hero-tag-badge">${top1.categoryName || 'ASOSIY'}</span>
+                  <h2 class="trend-hero-title">${top1.title}</h2>
+                  ${top1.summary ? `<p class="trend-hero-desc">${top1.summary}</p>` : ''}
+                  <div class="trend-hero-meta">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span>${Icons.clock} ${top1.time}</span>
+                      <span>${Icons.calendar} ${top1.date}</span>
+                    </div>
+                    <span class="trend-read-action">Batafsil o‘qish →</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- 3. Keyingi o'rinlar reytingi (2-o'rindan boshlab) -->
+          <div class="section-headline-bar" style="margin-top: 28px; margin-bottom: 16px;">
+            <h3 class="headline-text" style="display: flex; align-items: center; gap: 8px;">
+              <span>📊</span> Ommaboplik reytingi (2–${list.length}-o‘rinlar)
+            </h3>
+            <span style="font-size: 11px; color: var(--text-dim);">Eng ko‘p o‘qilgan</span>
+          </div>
+
+          <div class="trend-stream-container">
+            ${remaining.map((n, idx) => {
+              const rank = idx + 2;
+              const rankBadgeClass = rank === 2 ? 'rank-silver' : (rank === 3 ? 'rank-bronze' : 'rank-normal');
+              const rankText = rank === 2 ? '🥈 #2' : (rank === 3 ? '🥉 #3' : `#${rank}`);
+              return `
+                <div class="trend-stream-card" data-open-id="${n.id}">
+                  <div class="trend-rank-pillar ${rankBadgeClass}">
+                    <span class="trend-pillar-num">${rankText}</span>
+                  </div>
+                  <img class="news-item-thumb" src="${n.imageUrl}" alt="${n.title}" loading="lazy" />
+                  <div class="news-item-details">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                      <span class="hero-tag-badge" style="font-size: 9px; padding: 2px 6px;">${n.categoryName || 'Xabar'}</span>
+                      <span style="font-size: 10.5px; color: var(--text-dim);">${n.date}</span>
+                    </div>
+                    <h4 class="news-item-title">${n.title}</h4>
+                    <div class="trend-views-count-row">
+                      <span class="trend-views-badge">${Icons.eye} ${(n.views || 0).toLocaleString()}</span>
+                      <span style="font-size: 11px; color: var(--text-dim);">${Icons.clock} ${n.time}</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- O'ng Yon Panel (Desktop) -->
+        <aside class="desktop-sidebar">
+          <div class="sidebar-widget info-ticker-widget">
+            <div class="widget-header">
+              <span class="widget-icon">📈</span>
+              <h3 class="widget-title">Markaziy Bank Kurslari</h3>
+            </div>
+            <div class="currency-rates-grid">
+              <div class="currency-rate-item">
+                <span class="curr-flag">🇺🇸 USD</span>
+                <span class="curr-val">12 850</span>
+                <span class="curr-diff up">▲ +12</span>
+              </div>
+              <div class="currency-rate-item">
+                <span class="curr-flag">🇪🇺 EUR</span>
+                <span class="curr-val">13 920</span>
+                <span class="curr-diff up">▲ +18</span>
+              </div>
+              <div class="currency-rate-item">
+                <span class="curr-flag">🇷🇺 RUB</span>
+                <span class="curr-val">132.5</span>
+                <span class="curr-diff down">▼ -0.3</span>
               </div>
             </div>
           </div>
-        `).join('')}
+
+          <div class="sidebar-widget social-widget">
+            <div class="widget-header">
+              <h3 class="widget-title">Biz ijtimoiy tarmoqlarda</h3>
+            </div>
+            <div class="sidebar-social-links">
+              <a href="https://t.me" target="_blank" class="social-pill-btn tg">
+                ${Icons.telegram} <span>Telegram</span>
+              </a>
+              <a href="https://youtube.com" target="_blank" class="social-pill-btn yt">
+                ${Icons.youtube} <span>YouTube</span>
+              </a>
+              <a href="https://instagram.com" target="_blank" class="social-pill-btn ig">
+                ${Icons.instagram} <span>Instagram</span>
+              </a>
+            </div>
+          </div>
+        </aside>
       </div>
     `;
   }

@@ -9,7 +9,6 @@ export const INITIAL_CATEGORIES = [
   { id: 'texnologiya', name: 'Texnologiya', icon: 'cpu', color: '#0284C7' },
   { id: 'sport', name: 'Sport', icon: 'trophy', color: '#16A34A' },
   { id: 'video', name: 'Video', icon: 'play-circle', color: '#E50914' },
-  { id: 'trend', name: 'Trend', icon: 'trending-up', color: '#8B5CF6' },
   { id: 'tahlil', name: 'Tahlil', icon: 'file-text', color: '#475569' },
   { id: 'foto', name: 'Foto galereya', icon: 'image', color: '#059669' }
 ];

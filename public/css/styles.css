@@ -915,6 +915,257 @@ button {
 }
 
 /* ==========================================================================
+   TRENDLAR EKRANI (World-Class Trending Screen)
+   ========================================================================== */
+.trend-hero-header {
+  margin-bottom: 22px;
+}
+
+.trend-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(229, 9, 20, 0.12);
+  border: 1px solid rgba(229, 9, 20, 0.35);
+  color: var(--an-red);
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.flame-pulse-icon {
+  display: inline-block;
+  animation: pulseFlame 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseFlame {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+}
+
+.trend-main-heading {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-main);
+  line-height: 1.28;
+  margin-bottom: 6px;
+}
+
+.trend-sub-heading {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+/* 1-o'rindagi Grand Trend Kartasi */
+.trend-hero-card {
+  position: relative;
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  background-color: #000000;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.trend-hero-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 50px rgba(229, 9, 20, 0.25);
+}
+
+.trend-hero-img-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 260px;
+  max-height: 440px;
+}
+
+.trend-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  transition: transform 0.4s ease;
+}
+
+.trend-hero-card:hover .trend-hero-img {
+  transform: scale(1.03);
+}
+
+.trend-hero-top-badges {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trend-crown-badge {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 5px 12px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45);
+  letter-spacing: 0.5px;
+}
+
+.trend-views-glow-pill {
+  background: rgba(14, 15, 20, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.trend-hero-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  color: #FFFFFF;
+  z-index: 4;
+}
+
+.trend-hero-title {
+  font-size: 18.5px;
+  font-weight: 900;
+  color: #FFFFFF;
+  line-height: 1.35;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.trend-hero-desc {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.trend-hero-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.trend-read-action {
+  font-weight: 800;
+  color: #FFFFFF;
+  background: var(--an-red);
+  padding: 5px 12px;
+  border-radius: 8px;
+  transition: transform 0.15s ease;
+}
+
+.trend-hero-card:hover .trend-read-action {
+  transform: translateX(3px);
+}
+
+/* 2-o'rindan boshlab Trendlar Ro'yxati */
+.trend-stream-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trend-stream-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trend-stream-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(229, 9, 20, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.trend-rank-pillar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.trend-rank-pillar.rank-silver {
+  background: linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%);
+  color: #0F172A;
+  box-shadow: 0 4px 12px rgba(148, 163, 184, 0.3);
+}
+
+.trend-rank-pillar.rank-bronze {
+  background: linear-gradient(135deg, #FDE68A 0%, #B45309 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.3);
+}
+
+.trend-rank-pillar.rank-normal {
+  background: var(--bg-pill);
+  color: var(--text-dim);
+  border: 1px solid var(--border-subtle);
+}
+
+.trend-views-count-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.trend-views-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(229, 9, 20, 0.1);
+  color: var(--an-red);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* ==========================================================================
    4. «BARCHASI» MENYUSI EKRANI (Rasmdagi 2-ekran)
    ========================================================================== */
 .menu-view-screen {
@@ -2912,6 +3163,26 @@ button {
   .hero-tag-badge {
     font-size: 11px !important;
     padding: 4px 10px !important;
+  }
+
+  /* Trendlar Sahifasi Desktop Moslashuvi */
+  .trend-main-heading {
+    font-size: 28px !important;
+  }
+
+  .trend-hero-title {
+    font-size: 24px !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .trend-hero-img-box {
+    height: 380px !important;
+  }
+
+  .trend-stream-container {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
   }
 
 
