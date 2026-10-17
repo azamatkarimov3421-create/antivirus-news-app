@@ -879,3 +879,289 @@ button {
   from { opacity: 0; transform: translate(-50%, 15px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ==========================================================================
+   7. CLOUDFLARE D1 + R2 BAZA BANNERI VA ADMIN MODAL
+   ========================================================================== */
+.db-status-banner {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.db-status-banner:hover {
+  border-color: var(--an-red);
+  box-shadow: 0 4px 16px rgba(229, 9, 20, 0.15);
+}
+
+.db-status-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.db-status-pulse {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.db-status-pulse.online {
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
+  animation: pulseGreen 2s infinite;
+}
+
+.db-status-pulse.offline {
+  background: #F59E0B;
+  box-shadow: 0 0 8px #F59E0B;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.db-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.db-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.db-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.badge-connected {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-local {
+  background: rgba(245, 158, 11, 0.18);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.db-subtext {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* CF Admin Modal */
+.admin-modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-modal-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-nav-tabs {
+  display: flex;
+  background: var(--bg-pill);
+  padding: 4px;
+  border-radius: 10px;
+  margin: 16px 20px 0 20px;
+  gap: 4px;
+}
+
+.admin-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.admin-tab-btn.active {
+  background: var(--an-red);
+  color: #FFFFFF;
+}
+
+.admin-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input, .form-textarea, .form-select {
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-main);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--an-red);
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.btn-primary-red {
+  background: var(--an-red);
+  color: #FFFFFF;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--an-red-glow);
+  transition: opacity 0.15s ease;
+}
+
+.btn-primary-red:hover {
+  opacity: 0.92;
+}
+
+.btn-outline-pill {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline-pill:hover {
+  border-color: var(--an-red);
+  color: var(--an-red);
+}
+
+.status-info-box {
+  background: var(--bg-pill);
+  border-left: 3px solid #10B981;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.status-info-box.error {
+  border-left-color: var(--an-red);
+  color: #EF4444;
+}
+
+.cf-specs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cf-spec-card {
+  background: var(--bg-pill);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+.cf-spec-card h5 {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.cf-spec-card p {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+

@@ -74,6 +74,16 @@ Ushbu platforma foydalanuvchi taqdim etgan dizayn konsepti asosida to‘liq 1:1 
 
 ---
 
+## 🌐 Jonli Sayt & Baza Integratsiyasi
+
+- **Jonli Vercel Sayti:** [https://antivirus-news-app-uwl4.vercel.app/](https://antivirus-news-app-uwl4.vercel.app/)
+- **GitHub Repozitoriyasi:** [https://github.com/azamatkarimov3421-create/antivirus-news-app](https://github.com/azamatkarimov3421-create/antivirus-news-app)
+- **Ma'lumotlar Bazasi:** **Cloudflare D1 SQL** (5 GB Bepul) + **Cloudflare R2 Media Storage** (10 GB Bepul) — Jami 15 GB bepul sig'im, $0 chiqish trafigi.
+
+Batafsil serverless o'rnatish qo'llanmasi: [`cloudflare/README.md`](./cloudflare/README.md)
+
+---
+
 ## 🚀 Ishga tushirish
 
 1. Ushbu omborni klonlang:
@@ -82,10 +92,13 @@ Ushbu platforma foydalanuvchi taqdim etgan dizayn konsepti asosida to‘liq 1:1 
    cd antivirus-news-app
    ```
 
-2. Brauzerda ochish:
-   - `index.html` faylini istalgan brauzerda to‘g‘ridan-to‘g‘ri oching.
-   - Yoki istalgan lokal server (Live Server, `npx serve` va h.k.) orqali ishga tushiring.
+2. Brauzerda ochish yoki lokal server:
+   ```bash
+   node build.js
+   npx serve public
+   ```
 
 ---
 
 © 2026 **ANTIVIRUS NEWS MEDIA**. Barcha huquqlar himoyalangan.
+

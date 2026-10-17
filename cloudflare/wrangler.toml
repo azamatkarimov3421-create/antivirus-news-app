@@ -1,0 +1,14 @@
+name = "antivirus-news-api"
+main = "worker.js"
+compatibility_date = "2026-10-17"
+
+# 1. Cloudflare D1 SQL Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "antivirus-news-db"
+database_id = "YOUR_D1_DATABASE_ID_HERE"
+
+# 2. Cloudflare R2 Media Storage Bucket Binding
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "antivirus-media"
