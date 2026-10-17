@@ -161,8 +161,12 @@ class AntivirusApp {
 
   setCategory(catId) {
     this.selectedCategory = catId;
-    if (this.currentTab !== 'home') {
-      this.currentTab = 'home';
+    if (catId === 'trend') {
+      this.currentTab = 'trend';
+    } else {
+      if (this.currentTab !== 'home') {
+        this.currentTab = 'home';
+      }
     }
     this.render();
   }
@@ -461,10 +465,6 @@ class AntivirusApp {
                 <span>${Icons.home}</span>
                 <span>Asosiy</span>
               </button>
-              <button class="desktop-nav-link ${this.currentTab === 'trend' ? 'active' : ''}" data-tab-link="trend">
-                <span>${Icons.trendingUp}</span>
-                <span>Trend</span>
-              </button>
               <button class="desktop-nav-link ${this.currentTab === 'video' ? 'active' : ''}" data-tab-link="video">
                 <span>${Icons.playCircle}</span>
                 <span>Video</span>
@@ -542,8 +542,8 @@ class AntivirusApp {
           </div>
         </div>
 
-        <!-- 2. Gorizontal Toifalar (Faqat Asosiy sahifada) -->
-        ${this.currentTab === 'home' ? this.renderCategoryTabs(categories) : ''}
+        <!-- 2. Gorizontal Toifalar (Asosiy va Trend sahifalarida) -->
+        ${this.currentTab === 'home' || this.currentTab === 'trend' ? this.renderCategoryTabs(categories) : ''}
 
         <!-- 3. Asosiy Tana (Body) -->
         <main class="main-view-body">
@@ -552,14 +552,14 @@ class AntivirusApp {
 
         <!-- 4. Pastki Navigatsiya Bar (Faqat Mobil Ekranda) -->
         <nav class="bottom-navigation-bar">
-          <div class="nav-bottom-item ${this.currentTab === 'home' ? 'active' : ''}" data-tab-link="home">
+          <div class="nav-bottom-item ${this.currentTab === 'home' && this.selectedCategory !== 'trend' ? 'active' : ''}" data-tab-link="home">
             <span>${Icons.home}</span>
             <span class="nav-bottom-label">Asosiy</span>
           </div>
 
-          <div class="nav-bottom-item ${this.currentTab === 'trend' ? 'active' : ''}" data-tab-link="trend">
-            <span>${Icons.trendingUp}</span>
-            <span class="nav-bottom-label">Trend</span>
+          <div class="nav-bottom-item ${this.currentTab === 'video' ? 'active' : ''}" data-tab-link="video">
+            <span>${Icons.playCircle}</span>
+            <span class="nav-bottom-label">Video</span>
           </div>
 
           <!-- MARKAZIY 3D QIZIL "AN" FLOATING TUGMASI -->
@@ -567,9 +567,9 @@ class AntivirusApp {
             <div class="center-an-sphere">AN</div>
           </div>
 
-          <div class="nav-bottom-item ${this.currentTab === 'video' ? 'active' : ''}" data-tab-link="video">
-            <span>${Icons.playCircle}</span>
-            <span class="nav-bottom-label">Video</span>
+          <div class="nav-bottom-item ${this.currentTab === 'saved' ? 'active' : ''}" data-tab-link="saved">
+            <span>${Icons.bookmark}</span>
+            <span class="nav-bottom-label">Saqlangan</span>
           </div>
 
           <div class="nav-bottom-item ${this.currentTab === 'menu' ? 'active' : ''}" data-tab-link="menu">
@@ -601,11 +601,14 @@ class AntivirusApp {
     return `
       <div class="category-tabs-container">
         <nav class="category-tabs-bar">
-          <div class="cat-tab-item ${this.selectedCategory === 'all' ? 'active' : ''}" data-cat-select="all">
+          <div class="cat-tab-item ${this.selectedCategory === 'all' && this.currentTab === 'home' ? 'active' : ''}" data-cat-select="all">
             Barchasi
           </div>
+          <div class="cat-tab-item ${this.currentTab === 'trend' ? 'active' : ''}" data-cat-select="trend">
+            🔥 Trend
+          </div>
           ${list.map(c => `
-            <div class="cat-tab-item ${this.selectedCategory === c.id ? 'active' : ''}" data-cat-select="${c.id}">
+            <div class="cat-tab-item ${this.selectedCategory === c.id && this.currentTab === 'home' ? 'active' : ''}" data-cat-select="${c.id}">
               ${c.name}
             </div>
           `).join('')}
@@ -861,9 +864,9 @@ class AntivirusApp {
           </div>
         </div>
 
-        <!-- 11 ta Bo'limlar Ro'yxati -->
+        <!-- Bo'limlar Ro'yxati -->
         <div class="categories-vertical-stack">
-          ${categories.map(c => `
+          ${categories.filter(c => c.id !== 'all' && c.id !== 'trend').map(c => `
             <div class="cat-vertical-row" data-cat-select="${c.id}">
               <div class="cat-row-left">
                 <div class="cat-row-icon" style="color: ${c.color};">
