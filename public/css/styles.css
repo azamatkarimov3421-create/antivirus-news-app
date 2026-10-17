@@ -1316,4 +1316,246 @@ button {
   color: #FFFFFF;
 }
 
+/* ==========================================================================
+   VIDEO & MEDIA UPLOAD / EMBED ENHANCEMENTS
+   ========================================================================== */
+
+/* Video manbasini tanlash (Havola vs Fayl) */
+.video-source-mode-selector {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-pill);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 12px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+}
+
+.mode-btn.active {
+  background: var(--an-red);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px var(--an-red-glow);
+}
+
+/* Video fayl yuklash Dropzone */
+.video-file-dropzone {
+  border: 2px dashed rgba(229, 9, 20, 0.4);
+  background: rgba(229, 9, 20, 0.03);
+  border-radius: 12px;
+  padding: 16px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-file-dropzone:hover,
+.video-file-dropzone.dragover {
+  border-color: var(--an-red);
+  background: rgba(229, 9, 20, 0.08);
+}
+
+.dropzone-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.dropzone-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.dropzone-sub {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.btn-select-file {
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-select-file:hover {
+  background: var(--an-red);
+  color: #FFFFFF;
+  border-color: var(--an-red);
+}
+
+/* Tanlangan media fayl kartochkasi */
+.media-preview-card {
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.media-preview-thumb {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #000;
+  flex-shrink: 0;
+}
+
+.media-preview-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.media-preview-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-preview-size {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.media-preview-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22C55E;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Tezkor manba tugmachalari */
+.quick-source-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.quick-pill {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: var(--bg-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-pill:hover {
+  border-color: var(--an-red);
+  color: var(--an-red);
+}
+
+/* Video Reader Embed Konteynerlari */
+.video-embed-box {
+  width: 100%;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+.video-embed-box.youtube-box {
+  aspect-ratio: 16/9;
+}
+
+.video-embed-box.instagram-box {
+  max-width: 500px;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: #000;
+  padding-bottom: 8px;
+}
+
+.instagram-iframe {
+  width: 100%;
+  min-height: 520px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.video-embed-box.telegram-box {
+  max-width: 540px;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: #fff;
+  padding: 6px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+}
+
+.telegram-iframe {
+  width: 100%;
+  min-height: 440px;
+  border: none;
+}
+
+.video-direct-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.7);
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.video-direct-link a {
+  color: #FFFFFF;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.video-direct-link a:hover {
+  opacity: 0.85;
+}
+
+
 

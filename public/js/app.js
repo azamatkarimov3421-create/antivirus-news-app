@@ -1,9 +1,10 @@
 // ANTIVIRUS NEWS — Siyraklashtirilgan, Aniq va Tezkor Ilova Mantig'i
-// Cloudflare (D1 SQL Baza + R2 Xotira) bilan to'liq integratsiya qilingan
+// Cloudflare (D1 SQL Baza + R2 Xotira) va IndexedDB bilan to'liq integratsiya qilingan
 import { store } from './store.js';
 import { Icons, getCategoryIcon } from './icons.js';
+import { mediaDb, captureVideoMetadata, processImageFile, extractDomainName } from './mediaDb.js';
 
-// Video URL (YouTube, MP4, Telegram) ni avtomatik tahlil qiluvchi
+// Video URL (YouTube, Instagram, Telegram, Sayt yoki Mahalliy fayl) ni avtomatik tahlil qiluvchi
 export function parseVideoEmbed(url) {
   if (!url) return null;
   const trimmed = url.trim();
@@ -17,26 +18,69 @@ export function parseVideoEmbed(url) {
       type: 'youtube',
       embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`,
       thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-      originalUrl: trimmed
+      originalUrl: trimmed,
+      source: 'YouTube'
     };
   }
 
-  // 2. Direct MP4 / WebM video fayl
-  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(trimmed)) {
+  // 2. Instagram Reels / Post / TV
+  const igRegex = /(?:instagram\.com|instagr\.am)\/(?:reel|p|tv)\/([a-zA-Z0-9_-]+)/i;
+  const igMatch = trimmed.match(igRegex);
+  if (igMatch && igMatch[1]) {
+    const code = igMatch[1];
+    return {
+      type: 'instagram',
+      embedUrl: `https://www.instagram.com/reel/${code}/embed/`,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80',
+      originalUrl: trimmed,
+      source: 'Instagram'
+    };
+  }
+
+  // 3. Telegram Post / Channel
+  const tgRegex = /(?:t\.me|telegram\.me)\/([a-zA-Z0-9_]{3,})\/([0-9]+)/i;
+  const tgMatch = trimmed.match(tgRegex);
+  if (tgMatch && tgMatch[1] && tgMatch[2]) {
+    const channel = tgMatch[1];
+    const post = tgMatch[2];
+    return {
+      type: 'telegram',
+      embedUrl: `https://t.me/${channel}/${post}?embed=1`,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
+      originalUrl: trimmed,
+      source: `Telegram (@${channel})`
+    };
+  }
+
+  // 4. Mahalliy IndexedDB, Blob yoki Data URL
+  if (trimmed.startsWith('idb://') || trimmed.startsWith('blob:') || trimmed.startsWith('data:video')) {
+    return {
+      type: 'local',
+      embedUrl: trimmed,
+      thumbnailUrl: null,
+      originalUrl: trimmed,
+      source: 'Mahalliy Video Fayl'
+    };
+  }
+
+  // 5. To'g'ridan-to'g'ri MP4 / WebM / MOV / OGG video fayl
+  if (/\.(mp4|webm|mov|ogg|m3u8)(\?.*)?$/i.test(trimmed)) {
     return {
       type: 'video',
       embedUrl: trimmed,
       thumbnailUrl: null,
-      originalUrl: trimmed
+      originalUrl: trimmed,
+      source: extractDomainName(trimmed)
     };
   }
 
-  // 3. Iframe embed yoki standart
+  // 6. Generic embed yoki veb sahifa
   return {
     type: 'generic',
     embedUrl: trimmed,
     thumbnailUrl: null,
-    originalUrl: trimmed
+    originalUrl: trimmed,
+    source: extractDomainName(trimmed)
   };
 }
 
@@ -47,11 +91,20 @@ class AntivirusApp {
     this.searchQuery = '';
     this.activeArticleId = null;
     this.isCfModalOpen = false;
-    this.cfActiveTab = 'stats'; // 'stats' | 'add-news' | 'list'
+    this.cfActiveTab = 'stats'; // 'stats' | 'add-news' | 'video' | 'list'
     this.cfTestStatus = null;
     this.isUploadingMedia = false;
     this.speechSynth = window.speechSynthesis;
     this.isAudioPlaying = false;
+
+    // Video & Rasm yuklash holatlari
+    this.videoUploadMode = 'url'; // 'url' | 'file'
+    this.pendingVideoFile = null;
+    this.pendingVideoThumbnail = null;
+    this.pendingVideoDuration = '03:45';
+    this.pendingVideoUrl = '';
+    this.pendingVideoSource = 'YouTube';
+    this.pendingNewsImageUrl = '';
 
     this.init();
   }
@@ -107,6 +160,19 @@ class AntivirusApp {
     this.activeArticleId = id;
     store.incrementViews(id);
     this.render();
+
+    // Agar ushbu maqolada mahalliy IndexedDB video bo'lsa, URL olib pleyerga o'rnatamiz
+    const article = store.getNewsById(id);
+    if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
+      const fileId = article.videoUrl.replace('idb://', '');
+      mediaDb.getMediaUrl(fileId).then(blobUrl => {
+        const player = document.getElementById('activeArticleVideoPlayer');
+        if (player && blobUrl) {
+          player.src = blobUrl;
+          player.play().catch(() => {});
+        }
+      });
+    }
   }
 
   closeArticle() {
@@ -535,13 +601,15 @@ class AntivirusApp {
     `;
   }
 
-  // Maqola/Video media renderi (Video bo'lsa darhol o'ynaydi)
+  // Maqola/Video media renderi (YouTube, Instagram, Telegram, Mahalliy fayl)
   renderArticleMedia(article) {
     if (article.videoUrl) {
       const parsed = parseVideoEmbed(article.videoUrl);
-      if (parsed.type === 'youtube' || parsed.type === 'generic') {
+
+      // 1. YouTube video
+      if (parsed.type === 'youtube') {
         return `
-          <div style="width: 100%; aspect-ratio: 16/9; background: #000; position: relative;">
+          <div class="video-embed-box youtube-box">
             <iframe
               src="${parsed.embedUrl}"
               style="width: 100%; height: 100%; border: none;"
@@ -550,10 +618,78 @@ class AntivirusApp {
             ></iframe>
           </div>
         `;
-      } else if (parsed.type === 'video') {
+      }
+
+      // 2. Instagram Reels / Post
+      if (parsed.type === 'instagram') {
         return `
-          <div style="width: 100%; aspect-ratio: 16/9; background: #000;">
-            <video src="${parsed.embedUrl}" poster="${article.imageUrl}" controls autoplay style="width: 100%; height: 100%; object-fit: contain;"></video>
+          <div class="video-embed-box instagram-box">
+            <iframe
+              src="${parsed.embedUrl}"
+              class="instagram-iframe"
+              scrolling="no"
+              allowtransparency="true"
+              allowfullscreen
+            ></iframe>
+            <div class="video-direct-link">
+              <a href="${article.sourceUrl || article.videoUrl}" target="_blank" rel="noopener noreferrer">
+                📸 Instagramda to‘liq ko‘rish ↗
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Telegram kanali / posti
+      if (parsed.type === 'telegram') {
+        return `
+          <div class="video-embed-box telegram-box">
+            <iframe
+              src="${parsed.embedUrl}"
+              class="telegram-iframe"
+              scrolling="no"
+              allowfullscreen
+            ></iframe>
+            <div class="video-direct-link">
+              <a href="${article.sourceUrl || article.videoUrl}" target="_blank" rel="noopener noreferrer">
+                ✈️ Telegram kanalida ko‘rish ↗
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      // 4. Mahalliy video (IndexedDB xotirasidan o'ynaydi)
+      if (parsed.type === 'local') {
+        const fileId = article.videoUrl.replace('idb://', '');
+        const cachedUrl = mediaDb.getCachedUrl(fileId) || '';
+        return `
+          <div class="video-embed-box" style="aspect-ratio: 16/9; background: #000;">
+            <video
+              id="activeArticleVideoPlayer"
+              src="${cachedUrl}"
+              poster="${article.imageUrl}"
+              controls
+              autoplay
+              playsinline
+              style="width: 100%; height: 100%; object-fit: contain;"
+            ></video>
+          </div>
+        `;
+      }
+
+      // 5. To'g'ridan-to'g'ri MP4 / WebM yoki umumiy video
+      if (parsed.type === 'video' || parsed.type === 'generic') {
+        return `
+          <div class="video-embed-box" style="aspect-ratio: 16/9; background: #000;">
+            <video
+              src="${parsed.embedUrl}"
+              poster="${article.imageUrl}"
+              controls
+              autoplay
+              playsinline
+              style="width: 100%; height: 100%; object-fit: contain;"
+            ></video>
           </div>
         `;
       }
@@ -809,8 +945,18 @@ class AntivirusApp {
               </div>
 
               <div class="form-group">
-                <label class="form-label">Rasm URL Manzili</label>
-                <input type="url" id="cfNewsImageUrl" class="form-input" placeholder="https://images.unsplash.com/..." />
+                <label class="form-label">Rasm URL Manzili yoki Qurilmadan Rasm</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="url" id="cfNewsImageUrl" class="form-input" placeholder="https://... yoki fayl tanlang" value="${this.pendingNewsImageUrl || ''}" />
+                  <button type="button" class="btn-select-file" id="cfPickNewsPhotoBtn" style="white-space: nowrap;">🖼️ Fayldan</button>
+                  <input type="file" id="cfNewsPhotoInput" accept="image/*" style="display: none;" />
+                </div>
+                ${this.pendingNewsImageUrl ? `
+                  <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; background: rgba(34, 197, 94, 0.08); padding: 6px 10px; border-radius: 8px;">
+                    <img src="${this.pendingNewsImageUrl}" style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover;" />
+                    <span style="font-size: 11px; color: #22C55E; font-weight: 700;">✓ Rasm muvaffaqiyatli yuklandi</span>
+                  </div>
+                ` : ''}
               </div>
 
               <div class="form-group">
@@ -841,42 +987,120 @@ class AntivirusApp {
             </div>
           ` : ''}
 
-          <!-- TAB 3: ALOHIDA VIDEO XABAR QO'SHISH -->
+          <!-- TAB 3: ALOHIDA VIDEO XABAR QO'SHISH (YOUTUBE, INSTAGRAM, TELEGRAM, FAYLLAR) -->
           ${this.cfActiveTab === 'video' ? `
             <div class="admin-modal-body">
-              <div style="background: rgba(37, 99, 235, 0.08); border-left: 3px solid #2563EB; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; color: var(--text-main); margin-bottom: 4px;">
-                🎬 <b>Video xabar joylash:</b> YouTube, Telegram yoki to‘g‘ridan-to‘g‘ri video havolasini qo‘yishingiz mumkin.
+              <!-- Rejim tanlash: Havola yoki Fayldan yuklash -->
+              <div class="video-source-mode-selector">
+                <button type="button" class="mode-btn ${this.videoUploadMode === 'url' ? 'active' : ''}" data-video-mode="url">
+                  🌐 Havola orqali (YouTube / Insta / TG / Sayt)
+                </button>
+                <button type="button" class="mode-btn ${this.videoUploadMode === 'file' ? 'active' : ''}" data-video-mode="file">
+                  📁 Qurilmadan Video Fayl (MP4, MOV)
+                </button>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Video Sarlavhasi</label>
-                <input type="text" id="cfVideoTitle" class="form-input" placeholder="Video reportaj sarlavhasi..." />
-              </div>
+              ${this.videoUploadMode === 'url' ? `
+                <div style="background: rgba(37, 99, 235, 0.08); border-left: 3px solid #2563EB; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; color: var(--text-main); margin-bottom: 8px;">
+                  🎬 <b>Video manbasi:</b> YouTube, Instagram Reels, Telegram posti yoki istalgan saytdagi video havolasini kiriting.
+                </div>
 
-              <div class="form-group">
-                <label class="form-label">Video Havolasi (YouTube / Telegram / MP4)</label>
-                <input type="url" id="cfVideoUrl" class="form-input" placeholder="https://www.youtube.com/watch?v=... yoki https://youtu.be/..." />
-                <span style="font-size: 10.5px; color: var(--text-dim);">
-                  YouTube havolasi qo‘yilsa, muqova va video avtomatik tayyorlanadi!
-                </span>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Qaysi kanaldan/saytdan (Manba)</label>
-                  <input type="text" id="cfVideoSource" class="form-input" placeholder="YouTube, Telegram, Kun.uz TV..." value="YouTube" />
+                <!-- Tezkor namunalar -->
+                <div style="margin-bottom: 10px;">
+                  <span style="font-size: 10.5px; color: var(--text-dim); margin-right: 6px;">Tezkor tanlash:</span>
+                  <div class="quick-source-pills" style="display: inline-flex;">
+                    <button type="button" class="quick-pill" data-fill-video="yt">🔴 YouTube</button>
+                    <button type="button" class="quick-pill" data-fill-video="ig">🟣 Instagram</button>
+                    <button type="button" class="quick-pill" data-fill-video="tg">🔵 Telegram</button>
+                    <button type="button" class="quick-pill" data-fill-video="mp4">🟢 Sayt MP4</button>
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Video Davomiyligi</label>
-                  <input type="text" id="cfVideoDuration" class="form-input" placeholder="Masalan: 04:15, 12:30" value="03:45" />
+                  <label class="form-label">Video Havolasi (URL)</label>
+                  <input type="url" id="cfVideoUrl" class="form-input" placeholder="YouTube, Instagram, Telegram yoki video manzili..." value="${this.pendingVideoUrl || ''}" />
+                  <div id="cfVideoUrlStatus" style="font-size: 11px; margin-top: 4px; color: var(--text-dim);">
+                    YouTube, Instagram yoki Telegram havolasini qo‘ying — pleyer avtomatik sozlanadi!
+                  </div>
                 </div>
-              </div>
 
-              <div class="form-group">
-                <label class="form-label">Muqova Rasmi (Cover) — Ixtiyoriy</label>
-                <input type="url" id="cfVideoImageUrl" class="form-input" placeholder="Bo‘sh qoldirilsa, YouTube'dan avtomatik olinadi" />
-              </div>
+                <div class="form-group">
+                  <label class="form-label">Video Sarlavhasi</label>
+                  <input type="text" id="cfVideoTitle" class="form-input" placeholder="Video reportaj sarlavhasi..." />
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Qaysi kanaldan/saytdan (Manba)</label>
+                    <input type="text" id="cfVideoSource" class="form-input" placeholder="YouTube, Telegram, Instagram..." value="${this.pendingVideoSource || 'YouTube'}" />
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Video Davomiyligi</label>
+                    <input type="text" id="cfVideoDuration" class="form-input" placeholder="Masalan: 04:15, 12:30" value="${this.pendingVideoDuration || '03:45'}" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Muqova Rasmi (Cover) — Ixtiyoriy</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="url" id="cfVideoImageUrl" class="form-input" placeholder="Bo‘sh qoldirilsa, avtomatik olinadi" value="${this.pendingVideoThumbnail || ''}" />
+                    <button type="button" class="btn-select-file" id="cfPickCoverBtn" style="white-space: nowrap;">🖼️ Fayldan</button>
+                    <input type="file" id="cfCoverFileInput" accept="image/*" style="display: none;" />
+                  </div>
+                </div>
+              ` : `
+                <!-- FAYLDAN YUKLASH REJIMI -->
+                <div style="background: rgba(34, 197, 94, 0.08); border-left: 3px solid #22C55E; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; color: var(--text-main); margin-bottom: 8px;">
+                  📁 <b>Qurilmangizdan video:</b> MP4, WebM yoki MOV fayl tanlang. Video muqovasi va davomiyligi <b>avtomatik</b> aniqlanadi!
+                </div>
+
+                <div class="video-file-dropzone" id="cfVideoDropzone">
+                  <div class="dropzone-icon">🎬</div>
+                  <div class="dropzone-text">Video faylni tanlash uchun bosing</div>
+                  <div class="dropzone-sub">MP4, WebM, MOV formatlar (IndexedDB mahalliy xotirasida saqlanadi)</div>
+                  <button type="button" class="btn-select-file" id="cfChooseVideoFileBtn">📁 Video Faylni Tanlash</button>
+                  <input type="file" id="cfVideoFileInput" accept="video/mp4,video/webm,video/quicktime,video/*" style="display: none;" />
+                </div>
+
+                ${this.pendingVideoFile ? `
+                  <div class="media-preview-card">
+                    <img src="${this.pendingVideoThumbnail || 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=400&q=80'}" class="media-preview-thumb" alt="Kadr" />
+                    <div class="media-preview-details">
+                      <div class="media-preview-name">${this.pendingVideoFile.name}</div>
+                      <div class="media-preview-size">${(this.pendingVideoFile.size / (1024 * 1024)).toFixed(1)} MB • Davomiyligi: ${this.pendingVideoDuration || '00:00'}</div>
+                      <span class="media-preview-badge">✨ Video kadridan muqova avtomatik olindi!</span>
+                    </div>
+                    <button type="button" class="btn-del-sm" id="cfRemoveVideoFileBtn">✕ O‘chirish</button>
+                  </div>
+                ` : ''}
+
+                <div class="form-group" style="margin-top: 10px;">
+                  <label class="form-label">Video Sarlavhasi</label>
+                  <input type="text" id="cfVideoTitle" class="form-input" placeholder="Video reportaj sarlavhasi..." />
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Manba / Muallif</label>
+                    <input type="text" id="cfVideoSource" class="form-input" placeholder="Mobil Reportaj, Shaxsiy Video..." value="Shaxsiy Video" />
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Davomiyligi</label>
+                    <input type="text" id="cfVideoDuration" class="form-input" placeholder="Masalan: 02:30" value="${this.pendingVideoDuration || '00:00'}" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Muqova Rasmi</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="url" id="cfVideoImageUrl" class="form-input" placeholder="Avtomatik kadr yoki boshqa havola" value="${this.pendingVideoThumbnail || ''}" />
+                    <button type="button" class="btn-select-file" id="cfPickCoverBtn" style="white-space: nowrap;">🖼️ Boshqa Rasm</button>
+                    <input type="file" id="cfCoverFileInput" accept="image/*" style="display: none;" />
+                  </div>
+                </div>
+              `}
 
               <div class="form-group">
                 <label class="form-label">Qisqacha Tavsif / Mazmuni</label>
@@ -1049,46 +1273,266 @@ class AntivirusApp {
         isTrending
       });
 
+      this.pendingNewsImageUrl = '';
       this.showToast('🎉 Yangilik muvaffaqiyatli e\'lon qilindi!');
       this.closeCfModal();
       this.openArticle(created.id);
     });
 
-    // 9b. Alohida Video Xabar Qo'shish
+    // 9a-2. Rasmli xabar uchun fayldan rasm tanlash
+    document.getElementById('cfPickNewsPhotoBtn')?.addEventListener('click', () => {
+      document.getElementById('cfNewsPhotoInput')?.click();
+    });
+    document.getElementById('cfNewsPhotoInput')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        try {
+          this.showToast('⏳ Rasm qayta ishlanmoqda...');
+          const dataUrl = await processImageFile(file, 1200, 0.85);
+          this.pendingNewsImageUrl = dataUrl;
+          const input = document.getElementById('cfNewsImageUrl');
+          if (input) input.value = dataUrl;
+          this.showToast('🖼️ Rasm muvaffaqiyatli tanlandi!');
+          this.render();
+        } catch (err) {
+          alert('Rasm yuklashda xatolik: ' + err.message);
+        }
+      }
+    });
+
+    // 9b-1. Video rejimini o'zgartirish (Havola orqali vs Qurilmadan fayl)
+    document.querySelectorAll('[data-video-mode]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.currentTarget.getAttribute('data-video-mode');
+        if (mode && mode !== this.videoUploadMode) {
+          this.videoUploadMode = mode;
+          this.render();
+        }
+      });
+    });
+
+    // 9b-2. Tezkor video namunalarini qo'yish (YouTube, Instagram, Telegram, MP4)
+    document.querySelectorAll('[data-fill-video]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const type = e.currentTarget.getAttribute('data-fill-video');
+        const urlInput = document.getElementById('cfVideoUrl');
+        const sourceInput = document.getElementById('cfVideoSource');
+        const coverInput = document.getElementById('cfVideoImageUrl');
+        const titleInput = document.getElementById('cfVideoTitle');
+
+        if (type === 'yt') {
+          if (urlInput) urlInput.value = 'https://www.youtube.com/watch?v=5qap5aO4i9A';
+          if (sourceInput) sourceInput.value = 'YouTube';
+          if (coverInput) coverInput.value = 'https://img.youtube.com/vi/5qap5aO4i9A/hqdefault.jpg';
+          if (titleInput && !titleInput.value) titleInput.value = 'Lofi Hip Hop Radio — Jonli Efir';
+        } else if (type === 'ig') {
+          if (urlInput) urlInput.value = 'https://www.instagram.com/reel/C3_sampleReel/';
+          if (sourceInput) sourceInput.value = 'Instagram Reels';
+          if (coverInput) coverInput.value = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80';
+          if (titleInput && !titleInput.value) titleInput.value = 'Instagram Reels: Texnologiya yangiliklari';
+        } else if (type === 'tg') {
+          if (urlInput) urlInput.value = 'https://t.me/kunuzofficial/145829';
+          if (sourceInput) sourceInput.value = 'Telegram (@kunuzofficial)';
+          if (coverInput) coverInput.value = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80';
+          if (titleInput && !titleInput.value) titleInput.value = 'Telegram xabari: Kun yangiliklari reportaji';
+        } else if (type === 'mp4') {
+          if (urlInput) urlInput.value = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+          if (sourceInput) sourceInput.value = 'Google Video Server';
+          if (coverInput) coverInput.value = 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=1200&q=80';
+          if (titleInput && !titleInput.value) titleInput.value = 'Yuqori Sifatli MP4 Video Reportaj';
+        }
+
+        if (urlInput) {
+          urlInput.dispatchEvent(new Event('input'));
+        }
+      });
+    });
+
+    // 9b-3. Video URL jonli tahlil qilish (Avtomatik manba va muqova aniqlash)
+    const videoUrlEl = document.getElementById('cfVideoUrl');
+    videoUrlEl?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const statusEl = document.getElementById('cfVideoUrlStatus');
+      const sourceInput = document.getElementById('cfVideoSource');
+      const coverInput = document.getElementById('cfVideoImageUrl');
+
+      if (!val) {
+        if (statusEl) statusEl.innerHTML = 'YouTube, Instagram yoki Telegram havolasini qo‘ying — pleyer avtomatik sozlanadi!';
+        return;
+      }
+
+      const parsed = parseVideoEmbed(val);
+      if (parsed) {
+        if (parsed.type === 'youtube') {
+          if (statusEl) statusEl.innerHTML = '<span style="color: #EF4444; font-weight: 700;">🔴 YouTube video aniqlandi • HD Muqova va pleyer tayyorlandi!</span>';
+          if (sourceInput && (!sourceInput.value || sourceInput.value === 'YouTube')) sourceInput.value = 'YouTube';
+          if (coverInput && (!coverInput.value || coverInput.value.includes('img.youtube.com'))) {
+            coverInput.value = parsed.thumbnailUrl;
+            this.pendingVideoThumbnail = parsed.thumbnailUrl;
+          }
+        } else if (parsed.type === 'instagram') {
+          if (statusEl) statusEl.innerHTML = '<span style="color: #E1306C; font-weight: 700;">🟣 Instagram Reels / Post aniqlandi • Pleyer sozlandi!</span>';
+          if (sourceInput) sourceInput.value = 'Instagram';
+          if (coverInput && !coverInput.value) coverInput.value = parsed.thumbnailUrl;
+        } else if (parsed.type === 'telegram') {
+          if (statusEl) statusEl.innerHTML = '<span style="color: #0088CC; font-weight: 700;">🔵 Telegram posti aniqlandi • Rasmiy vidjet tayyorlandi!</span>';
+          if (sourceInput) sourceInput.value = parsed.source;
+          if (coverInput && !coverInput.value) coverInput.value = parsed.thumbnailUrl;
+        } else if (parsed.type === 'video') {
+          if (statusEl) statusEl.innerHTML = '<span style="color: #22C55E; font-weight: 700;">🟢 Sayt video fayli (MP4/WebM) aniqlandi • HTML5 pleyer tayyor!</span>';
+          if (sourceInput) sourceInput.value = parsed.source;
+        } else {
+          if (statusEl) statusEl.innerHTML = `<span style="color: var(--text-main);">🌐 Sayt havolasi aniqlandi: <b>${parsed.source}</b></span>`;
+          if (sourceInput) sourceInput.value = parsed.source;
+        }
+      }
+    });
+
+    // 9b-4. Video Fayl Tanlash (Qurilmadan video yuklash)
+    const chooseBtn = document.getElementById('cfChooseVideoFileBtn');
+    const dropzone = document.getElementById('cfVideoDropzone');
+    const fileInput = document.getElementById('cfVideoFileInput');
+
+    chooseBtn?.addEventListener('click', () => fileInput?.click());
+    dropzone?.addEventListener('click', (e) => {
+      if (e.target !== chooseBtn) fileInput?.click();
+    });
+
+    // Drag and drop qo'llab-quvvatlash
+    dropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone?.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+    dropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('video/')) {
+        handleVideoFileSelect(file);
+      } else {
+        alert('Iltimos, video fayl (MP4, WebM, MOV) tashlang!');
+      }
+    });
+
+    const handleVideoFileSelect = async (file) => {
+      this.showToast('⏳ Video fayl tahlil qilinmoqda (muqova va davomiylik)...');
+      try {
+        const meta = await captureVideoMetadata(file);
+        this.pendingVideoFile = file;
+        this.pendingVideoThumbnail = meta.thumbnailUrl;
+        this.pendingVideoDuration = meta.durationFormatted || '01:30';
+
+        const titleInput = document.getElementById('cfVideoTitle');
+        if (titleInput && !titleInput.value) {
+          titleInput.value = file.name.replace(/\.[^/.]+$/, '');
+        }
+
+        const durationInput = document.getElementById('cfVideoDuration');
+        if (durationInput) durationInput.value = this.pendingVideoDuration;
+
+        this.showToast('✨ Video qabul qilindi! Kadr muqovasi va davomiylik avtomatik olindi.');
+        this.render();
+      } catch (err) {
+        alert('Video tahlilida xatolik: ' + err.message);
+      }
+    };
+
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleVideoFileSelect(file);
+    });
+
+    // 9b-5. Tanlangan video faylni tozalash
+    document.getElementById('cfRemoveVideoFileBtn')?.addEventListener('click', () => {
+      this.pendingVideoFile = null;
+      this.pendingVideoThumbnail = null;
+      this.pendingVideoDuration = '00:00';
+      this.render();
+    });
+
+    // 9b-6. Boshqa muqova rasm tanlash (Fayldan)
+    document.getElementById('cfPickCoverBtn')?.addEventListener('click', () => {
+      document.getElementById('cfCoverFileInput')?.click();
+    });
+    document.getElementById('cfCoverFileInput')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        try {
+          this.showToast('⏳ Muqova rasmi siqilmoqda...');
+          const dataUrl = await processImageFile(file, 1200, 0.85);
+          this.pendingVideoThumbnail = dataUrl;
+          const coverInput = document.getElementById('cfVideoImageUrl');
+          if (coverInput) coverInput.value = dataUrl;
+          this.showToast('🖼️ Yangi muqova rasmi o‘rnatildi!');
+          this.render();
+        } catch (err) {
+          alert('Rasm tanlashda xatolik: ' + err.message);
+        }
+      }
+    });
+
+    // 9b-7. Alohida Video Xabar Qo'shish (Fayl yoki Havola)
     document.getElementById('cfSubmitVideoBtn')?.addEventListener('click', async () => {
       const title = document.getElementById('cfVideoTitle')?.value.trim();
-      const videoUrl = document.getElementById('cfVideoUrl')?.value.trim();
-      const source = document.getElementById('cfVideoSource')?.value.trim() || 'YouTube';
-      const duration = document.getElementById('cfVideoDuration')?.value.trim() || '03:45';
-      let imageUrl = document.getElementById('cfVideoImageUrl')?.value.trim();
+      const source = document.getElementById('cfVideoSource')?.value.trim() || 'Video';
+      const duration = document.getElementById('cfVideoDuration')?.value.trim() || this.pendingVideoDuration || '03:45';
+      let imageUrl = document.getElementById('cfVideoImageUrl')?.value.trim() || this.pendingVideoThumbnail;
       const summary = document.getElementById('cfVideoSummary')?.value.trim();
       const isHero = Boolean(document.getElementById('cfVideoIsHero')?.checked);
       const isTrending = Boolean(document.getElementById('cfVideoIsTrending')?.checked);
 
-      if (!title || !videoUrl) {
-        alert('Iltimos, video sarlavhasi va video havolasini kiriting!');
+      if (!title) {
+        alert('Iltimos, video sarlavhasini kiriting!');
         return;
       }
 
-      this.showToast('⏳ Video bazaga saqlanmoqda...');
+      let finalVideoUrl = '';
 
-      const parsed = parseVideoEmbed(videoUrl);
-      if (!imageUrl && parsed && parsed.thumbnailUrl) {
-        imageUrl = parsed.thumbnailUrl;
+      if (this.videoUploadMode === 'file') {
+        // Fayldan yuklash
+        if (!this.pendingVideoFile) {
+          alert('Iltimos, video faylni tanlang!');
+          return;
+        }
+
+        this.showToast('⏳ Video fayl mahalliy xotiraga (IndexedDB) saqlanmoqda...');
+        const fileId = 'vid_' + Date.now();
+        await mediaDb.saveMedia(fileId, this.pendingVideoFile, { title });
+        finalVideoUrl = 'idb://' + fileId;
+      } else {
+        // Havola orqali
+        const rawVideoUrl = document.getElementById('cfVideoUrl')?.value.trim();
+        if (!rawVideoUrl) {
+          alert('Iltimos, video havolasini kiriting!');
+          return;
+        }
+
+        const parsed = parseVideoEmbed(rawVideoUrl);
+        finalVideoUrl = (parsed && parsed.embedUrl) || rawVideoUrl;
+
+        if (!imageUrl && parsed && parsed.thumbnailUrl) {
+          imageUrl = parsed.thumbnailUrl;
+        }
       }
+
       if (!imageUrl) {
         imageUrl = 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80';
       }
+
+      this.showToast('🎬 Video bazaga saqlanmoqda...');
 
       const created = await store.createNews({
         title,
         category: 'video',
         categoryName: 'Video',
-        videoUrl: (parsed && parsed.embedUrl) || videoUrl,
+        videoUrl: finalVideoUrl,
         imageUrl,
         author: 'ANTIVIRUS Media',
         source,
-        sourceUrl: videoUrl,
+        sourceUrl: this.videoUploadMode === 'url' ? document.getElementById('cfVideoUrl')?.value.trim() : 'Qurilmadan yuklangan',
         readTime: duration,
         summary: summary || title,
         content: summary || title,
@@ -1097,17 +1541,27 @@ class AntivirusApp {
         tags: ['Video', source]
       });
 
+      // Tozalash
+      this.pendingVideoFile = null;
+      this.pendingVideoThumbnail = null;
+      this.pendingVideoUrl = '';
+
       this.showToast('🎬 Video muvaffaqiyatli saqlandi!');
       this.closeCfModal();
       this.setTab('video');
       this.openArticle(created.id);
     });
 
-    // 9c. Maqolani o'chirish
+    // 9c. Maqolani o'chirish (Agar IndexedDB fayli bo'lsa, xotiradan ham tozalash)
     document.querySelectorAll('[data-del-news-id]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.getAttribute('data-del-news-id');
         if (id && confirm('Ushbu yangilikni bazadan o‘chirmoqchimisiz?')) {
+          const article = store.getNewsById(id);
+          if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
+            const fileId = article.videoUrl.replace('idb://', '');
+            await mediaDb.deleteMedia(fileId);
+          }
           await store.deleteNews(id);
           this.showToast('🗑️ Maqola bazadan o‘chirildi');
           this.render();
