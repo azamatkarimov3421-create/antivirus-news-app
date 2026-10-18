@@ -22,6 +22,11 @@ export const CLOUDFLARE_CONFIG = {
   freeLimitFormatted: '5.00 GB'
 };
 
+export const DEMO_IDS = [
+  'an-001', 'an-002', 'an-003', 'an-004', 'an-005',
+  'an-006', 'an-007', 'an-008', 'an-009', 'an-010'
+];
+
 class NewsStore {
   constructor() {
     this.subscribers = [];
@@ -39,63 +44,84 @@ class NewsStore {
     }
   }
 
+  purgeAllDemoNews() {
+    const deletedIds = this.getDeletedIds();
+    DEMO_IDS.forEach(id => {
+      if (!deletedIds.includes(id)) deletedIds.push(id);
+    });
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(deletedIds));
+    }
+
+    let list = this.getNews();
+    list = list.filter(n => !DEMO_IDS.includes(n.id));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(list));
+    }
+
+    let saved = this.getSavedIds();
+    saved = saved.filter(id => !DEMO_IDS.includes(id));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(saved));
+    }
+
+    const apiUrl = this.getApiUrl();
+    if (apiUrl) {
+      DEMO_IDS.forEach(id => {
+        fetch(`${apiUrl}/api/news/${id}`, { method: 'DELETE' }).catch(() => {});
+      });
+    }
+
+    this.notify();
+    return list;
+  }
+
   init() {
     try {
       const deletedIds = this.getDeletedIds();
-      const storedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
-      if (!storedNews) {
-        const enriched = INITIAL_NEWS
-          .filter(n => !deletedIds.includes(n.id))
-          .map(n => ({
-            ...n,
-            aspectRatio: n.aspectRatio || '16:9',
-            source: n.source || 'ANTIVIRUS Tahririyati',
-            sourceUrl: n.sourceUrl || ''
-          }));
-        localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(enriched));
-      } else {
-        try {
-          let currentList = JSON.parse(storedNews);
-          let updated = false;
 
-          // Agar o'chirilgan maqola avvaldan ro'yxatda qolib ketgan bo'lsa, uni tozalaymiz
-          const initialCount = currentList.length;
-          currentList = currentList.filter(item => !deletedIds.includes(item.id));
-          if (currentList.length !== initialCount) {
-            updated = true;
-          }
-
-          currentList.forEach(item => {
-            if (!item.aspectRatio) {
-              const initMatch = INITIAL_NEWS.find(n => n.id === item.id);
-              item.aspectRatio = (initMatch && initMatch.aspectRatio) || '16:9';
-              updated = true;
-            }
-          });
-
-          // INITIAL_NEWS dan faqat FOYDALANUVCHI O'CHIRMAGAN maqolalarni kiritish
-          INITIAL_NEWS.forEach(initItem => {
-            if (deletedIds.includes(initItem.id)) return;
-            if (!currentList.some(n => n.id === initItem.id)) {
-              currentList.push({
-                ...initItem,
-                aspectRatio: initItem.aspectRatio || '16:9',
-                source: initItem.source || 'ANTIVIRUS Tahririyati',
-                sourceUrl: initItem.sourceUrl || ''
-              });
-              updated = true;
-            }
-          });
-          if (updated) {
-            localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
-          }
-        } catch {}
+      // Demo xabarlarni avtomatik ravishda mutlaq o'chirilganlar (Blacklist) qatoriga kiritish
+      let blacklistUpdated = false;
+      DEMO_IDS.forEach(demoId => {
+        if (!deletedIds.includes(demoId)) {
+          deletedIds.push(demoId);
+          blacklistUpdated = true;
+        }
+      });
+      if (blacklistUpdated && typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(deletedIds));
       }
+
+      const storedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
+      let currentList = [];
+      if (storedNews) {
+        try {
+          currentList = JSON.parse(storedNews);
+        } catch {
+          currentList = [];
+        }
+      }
+
+      // Barcha demo xabarlarni xotiradan butunlay qirib tashlash
+      const beforeClean = currentList.length;
+      currentList = currentList.filter(item => !DEMO_IDS.includes(item.id) && !deletedIds.includes(item.id));
+      if (currentList.length !== beforeClean || !storedNews) {
+        localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
+      }
+
+      // Saqlangan xabarlar (Bookmarks) orasidan ham demo xabarlarni tozalash
+      let saved = this.getSavedIds();
+      const beforeSavedClean = saved.length;
+      saved = saved.filter(id => !DEMO_IDS.includes(id) && !deletedIds.includes(id));
+      if (saved.length !== beforeSavedClean) {
+        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(saved));
+      }
+
       if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
         localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
       }
       if (!localStorage.getItem(STORAGE_KEYS.SAVED)) {
-        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(['an-001']));
+        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify([]));
       }
       if (!localStorage.getItem(STORAGE_KEYS.THEME)) {
         localStorage.setItem(STORAGE_KEYS.THEME, 'dark');
@@ -250,9 +276,9 @@ class NewsStore {
       if (res.ok) {
         const cloudNews = await res.json();
         if (Array.isArray(cloudNews) && cloudNews.length > 0) {
-          // O'chirilgan maqolalar qaytib kelmasligini kafolatlash
+          // O'chirilgan va demo maqolalar qaytib kelmasligini kafolatlash
           const deletedIds = this.getDeletedIds();
-          const filtered = cloudNews.filter(n => !deletedIds.includes(n.id));
+          const filtered = cloudNews.filter(n => !deletedIds.includes(n.id) && !DEMO_IDS.includes(n.id));
           localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(filtered));
           this.notify();
           return filtered;
@@ -316,12 +342,11 @@ class NewsStore {
     const deletedIds = this.getDeletedIds();
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.NEWS);
-      const list = stored ? JSON.parse(stored) : INITIAL_NEWS;
-      const filtered = list.filter(n => !deletedIds.includes(n.id));
+      const list = stored ? JSON.parse(stored) : [];
+      const filtered = list.filter(n => !deletedIds.includes(n.id) && !DEMO_IDS.includes(n.id));
       return [...filtered].sort((a, b) => this.compareNewest(a, b));
     } catch {
-      const filtered = INITIAL_NEWS.filter(n => !deletedIds.includes(n.id));
-      return [...filtered].sort((a, b) => this.compareNewest(a, b));
+      return [];
     }
   }
 
@@ -338,7 +363,7 @@ class NewsStore {
   }
 
   getNewsById(id) {
-    if (!id) return null;
+    if (!id || DEMO_IDS.includes(id)) return null;
     const deletedIds = this.getDeletedIds();
     if (deletedIds.includes(id)) return null;
     const list = this.getNews();

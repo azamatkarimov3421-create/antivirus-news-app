@@ -737,13 +737,23 @@ class AntivirusApp {
             </div>
           ` : ''}
 
-          <!-- 4. Bo'sh Holat (Agar qidiruv natijasi topilmasa) -->
+          <!-- 4. Bo'sh Holat (Baza toza bo'lsa yoki qidiruv topilmasa) -->
           ${list.length === 0 ? `
-            <div class="empty-state-card">
-              <div class="empty-state-icon">🔍</div>
-              <h3 class="empty-state-title">Hech qanday yangilik topilmadi</h3>
-              <p class="empty-state-desc">"${this.searchQuery}" so‘rovi bo‘yicha hech qanday xabar chiqmadi. Boshqa so‘z bilan qidirib ko‘ring yoki barcha yangiliklarga qayting.</p>
-              <button class="btn-primary-red" id="resetSearchQueryBtn2" style="max-width: 240px; margin: 0 auto;">Barcha yangiliklarga qaytish</button>
+            <div class="empty-state-card" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: 14px; border: 1px dashed var(--border-subtle); margin: 20px 0;">
+              <div class="empty-state-icon" style="font-size: 40px; margin-bottom: 12px;">📰</div>
+              <h3 class="empty-state-title" style="font-size: 17px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
+                ${this.searchQuery ? 'Hech qanday yangilik topilmadi' : 'Baza toza — Yangi xabar qo‘shing'}
+              </h3>
+              <p class="empty-state-desc" style="font-size: 13px; color: var(--text-dim); max-width: 440px; margin: 0 auto 18px;">
+                ${this.searchQuery ? `"${this.searchQuery}" so‘rovi bo‘yicha hech qanday xabar chiqmadi.` : 'Eski demo xabarlar butunlay tozalandi. O‘zingiz xohlagan yangilik yoki video reportajni kiritishingiz mumkin.'}
+              </p>
+              ${this.searchQuery ? `
+                <button class="btn-primary-red" id="resetSearchQueryBtn2" style="max-width: 240px; margin: 0 auto;">Barcha yangiliklarga qaytish</button>
+              ` : `
+                <button class="btn-primary-red" id="emptyStateAddBtn" style="max-width: 260px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                  <span>✍️ Birinchi xabarni qo‘shish</span>
+                </button>
+              `}
             </div>
           ` : `
             <!-- 5. So'nggi Yangiliklar Ro'yxati -->
@@ -1107,10 +1117,16 @@ class AntivirusApp {
   // -------------------------------------------------------------
   renderVideoView() {
     const allNews = store.getNews();
-    let videoList = allNews.filter(n => n.category === 'video' || n.videoUrl);
+    const videoList = allNews.filter(n => n.category === 'video' || n.videoUrl);
 
     if (videoList.length === 0) {
-      videoList = allNews.slice(0, 5);
+      return `
+        <div class="empty-state-card" style="margin-top: 40px; text-align: center; padding: 40px 20px;">
+          <div class="empty-state-icon" style="font-size: 40px; margin-bottom: 12px;">🎬</div>
+          <h3 class="empty-state-title">Hozircha video yangiliklar yo‘q</h3>
+          <p class="empty-state-desc">Admin panel orqali video yuklashingiz yoki YouTube havolasini kiritishingiz mumkin.</p>
+        </div>
+      `;
     }
 
     return `
@@ -1801,13 +1817,19 @@ class AntivirusApp {
           <!-- TAB 4: BAZADAGI MAQOLALAR VA VIDEOLAR RO'YXATI -->
           ${this.cfActiveTab === 'list' ? `
             <div class="admin-modal-body">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <span class="form-label">Bazadagi barcha xabarlar (${newsList.length})</span>
-                <span style="font-size: 11px; color: var(--text-dim);">Manbasi va turi</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <span class="form-label" style="margin-bottom: 0;">Bazadagi barcha xabarlar (${newsList.length})</span>
+                <button type="button" class="btn-del-sm" id="cfPurgeAllDemosBtn" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 5px 12px; font-weight: 700; cursor: pointer; border-radius: 6px;">
+                  🧹 Demo xabarlarni tozalash
+                </button>
               </div>
 
               <div class="admin-news-table-wrap">
-                ${newsList.map(n => `
+                ${newsList.length === 0 ? `
+                  <div style="text-align: center; padding: 36px 16px; color: var(--text-dim); font-size: 13px;">
+                    📭 Bazada yangiliklar yo‘q. Yangi maqola yoki video kiritishingiz mumkin.
+                  </div>
+                ` : newsList.map(n => `
                   <div class="admin-news-row">
                     <div class="admin-news-row-info">
                       <div class="admin-news-row-title">${n.title}</div>
@@ -2368,26 +2390,9 @@ class AntivirusApp {
         const id = e.currentTarget.getAttribute('data-del-news-id');
         if (!id) return;
 
-        // 1-bosqich: Qizil tasdiqlash holatiga o'tkazish (brauzer dialog bloklanishlaridan holi)
-        if (e.currentTarget.getAttribute('data-confirming') !== 'true') {
-          e.currentTarget.setAttribute('data-confirming', 'true');
-          e.currentTarget.style.background = '#EF4444';
-          e.currentTarget.style.color = '#FFFFFF';
-          e.currentTarget.style.borderColor = '#EF4444';
-          e.currentTarget.textContent = 'Aniqmi? Ha';
-          setTimeout(() => {
-            if (e.currentTarget && e.currentTarget.getAttribute('data-confirming') === 'true') {
-              e.currentTarget.removeAttribute('data-confirming');
-              e.currentTarget.style.background = '';
-              e.currentTarget.style.color = '';
-              e.currentTarget.style.borderColor = '';
-              e.currentTarget.textContent = 'O‘chirish';
-            }
-          }, 4000);
-          return;
-        }
+        btn.disabled = true;
+        btn.textContent = '...';
 
-        // 2-bosqich: Haqiqatda butunlay o'chirish
         const article = store.getNewsById(id);
         if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
           const fileId = article.videoUrl.replace('idb://', '');
@@ -2397,6 +2402,21 @@ class AntivirusApp {
         this.showToast('🗑️ Maqola bazadan butunlay o‘chirildi');
         this.render();
       });
+    });
+
+    // 9e. Barcha demo xabarlarni bitta tugmada tozalash
+    document.getElementById('cfPurgeAllDemosBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      store.purgeAllDemoNews();
+      this.showToast('🧹 Barcha eski demo xabarlar butunlay tozalandi!');
+      this.render();
+    });
+
+    // 9f. Bo'sh holatda birinchi yangilikni qo'shish tugmasi
+    document.getElementById('emptyStateAddBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openCfModal('news');
     });
 
     // 10. Kategoriya tanlash
@@ -2557,26 +2577,9 @@ class AntivirusApp {
         const id = articleDelBtn.getAttribute('data-article-del-id');
         if (!id) return;
 
-        // 1-bosqich: Tasdiqlash holati
-        if (articleDelBtn.getAttribute('data-confirming') !== 'true') {
-          articleDelBtn.setAttribute('data-confirming', 'true');
-          articleDelBtn.style.background = '#EF4444';
-          articleDelBtn.style.color = '#FFFFFF';
-          articleDelBtn.style.borderColor = '#EF4444';
-          articleDelBtn.innerHTML = `<span>⚠️ Aniq o‘chirilsinmi? (Ha)</span>`;
-          setTimeout(() => {
-            if (articleDelBtn && articleDelBtn.getAttribute('data-confirming') === 'true') {
-              articleDelBtn.removeAttribute('data-confirming');
-              articleDelBtn.style.background = '';
-              articleDelBtn.style.color = '';
-              articleDelBtn.style.borderColor = '';
-              articleDelBtn.innerHTML = `${Icons.trash} <span>O‘chirish</span>`;
-            }
-          }, 4000);
-          return;
-        }
+        articleDelBtn.disabled = true;
+        articleDelBtn.innerHTML = `<span>O‘chirilmoqda...</span>`;
 
-        // 2-bosqich: Haqiqatda bazadan to'liq o'chirish
         const article = store.getNewsById(id);
         if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
           const fileId = article.videoUrl.replace('idb://', '');
@@ -2585,6 +2588,7 @@ class AntivirusApp {
         await store.deleteNews(id);
         this.closeArticle();
         this.showToast('🗑️ Maqola bazadan butunlay o‘chirildi');
+        this.render();
       });
     }
 

@@ -2,7 +2,7 @@
 // ANTIVIRUS NEWS — Offline Service Worker (PWA & Google Play Store TWA)
 // ============================================================================
 
-const CACHE_NAME = 'antivirus-news-v1';
+const CACHE_NAME = 'antivirus-news-v4-network-first';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -19,22 +19,24 @@ const STATIC_ASSETS = [
   '/assets/icons/icon-maskable-512.png'
 ];
 
-// 1. Install — Statik resurslarni keshga saqlash
+// 1. Install — Statik resurslarni keshga saqlash va darhol faollashish
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// 2. Activate — Eski keshlarni tozalash
+// 2. Activate — Eski barcha keshlarni darhol tozalash va nazoratni olish
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('Eski kesh tozalanmoqda:', key);
             return caches.delete(key);
           }
         })
@@ -43,12 +45,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Fetch — Offline rejimda ishlash kafolati (Network First for navigation, Cache First for assets)
+// 3. Fetch — Har doim Tarmoqdan yangisini olish (Network First), Offline bo'lsagina keshdan o'qish
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Faqat GET so'rovlarni keshlaymiz
+  // Faqat GET so'rovlar
   if (req.method !== 'GET') return;
 
   // Cloudflare API yoki tashqi so'rovlar
@@ -59,28 +61,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Sahifa navigatsiyasi (Offline bo'lganda ham ilova ochiladi)
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req).catch(() => caches.match('/index.html'))
-    );
-    return;
-  }
-
-  // Statik fayllar: Stale-While-Revalidate
+  // Network-First strategiyasi: Har doim eng yangi versiyani olish
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req).then((networkRes) => {
+    fetch(req)
+      .then((networkRes) => {
         if (networkRes && networkRes.status === 200) {
           const clone = networkRes.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
         }
         return networkRes;
-      }).catch(() => {
-        return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
-      });
-
-      return cached || fetchPromise;
-    })
+      })
+      .catch(() => {
+        return caches.match(req).then((cached) => {
+          if (cached) return cached;
+          if (req.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
+        });
+      })
   );
 });
