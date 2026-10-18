@@ -524,12 +524,27 @@ class NewsStore {
     }
   }
 
+  cleanUsernameString(str) {
+    if (!str) return 'user';
+    const cyrillicToLatinMap = {
+      'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'j','з':'z',
+      'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+      'с':'s','т':'t','у':'u','ф':'f','х':'x','ц':'ts','ч':'ch','ш':'sh','щ':'sh',
+      'ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya','ў':'o','ғ':'g','қ':'q','ҳ':'h'
+    };
+    let s = str.trim().toLowerCase();
+    s = s.replace(/[а-яёўғқҳ]/g, ch => cyrillicToLatinMap[ch] || ch);
+    s = s.replace(/[^a-z0-9_.]/g, '');
+    return s || 'user';
+  }
+
   findUser(query) {
     if (!query) return null;
     const clean = query.trim().toLowerCase().replace(/^@/, '');
+    const cleanSlug = this.cleanUsernameString(clean);
     const users = this.getRegisteredUsers();
     return users.find(u => 
-      (u.username && u.username.toLowerCase() === clean) ||
+      (u.username && (u.username.toLowerCase() === clean || u.username.toLowerCase() === cleanSlug)) ||
       (u.id && u.id.toLowerCase() === clean) ||
       (u.name && u.name.toLowerCase() === clean)
     ) || null;
@@ -543,30 +558,27 @@ class NewsStore {
   }
 
   registerUser({ username, name, avatar }) {
-    const rawUsername = (username || '').trim();
+    const rawUsername = (username || name || '').trim();
     if (!rawUsername) {
       return { ok: false, error: 'Iltimos, ism yoki taxallus kiriting!' };
     }
-    const cleanUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_.]/g, '');
-    if (cleanUsername.length < 2) {
-      return { ok: false, error: 'Ism/taxallus kamida 2 ta harf yoki raqamdan iborat bo‘lishi kerak!' };
-    }
+    const cleanUsername = this.cleanUsernameString(rawUsername);
 
-    if (this.isUsernameTaken(cleanUsername)) {
-      return { 
-        ok: false, 
-        error: `«${rawUsername}» nomli foydalanuvchi allaqachon mavjud! Iltimos, boshqa nom tanlang (masalan: ${cleanUsername}_uz yoki ${cleanUsername}7).` 
-      };
+    let finalUsername = cleanUsername;
+    let counter = 1;
+    while (this.isUsernameTaken(finalUsername)) {
+      counter++;
+      finalUsername = `${cleanUsername}_${counter}`;
     }
 
     // Har bir odamga usha ism/nomga qarab unikal ID beriladi
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const uniqueId = `an_${cleanUsername}_${randomSuffix}`;
+    const uniqueId = `an_${finalUsername}_${randomSuffix}`;
     const displayName = (name && name.trim()) || rawUsername;
 
     const newUser = {
       id: uniqueId,
-      username: cleanUsername,
+      username: finalUsername,
       name: displayName,
       avatar: avatar || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80`,
       role: 'member',
@@ -586,12 +598,10 @@ class NewsStore {
       return { ok: false, error: 'Iltimos, ismingiz yoki taxallusingizni kiriting!' };
     }
 
-    const user = this.findUser(raw);
+    let user = this.findUser(raw);
     if (!user) {
-      return { 
-        ok: false, 
-        error: `«${raw}» nomli foydalanuvchi topilmadi. «Tezkor Ro‘yxatdan O‘tish» bo‘limidan yangi hisob ochishingiz mumkin!` 
-      };
+      // Foydalanuvchi topilmasa, to'xtatmasdan avtomatik unikal hisob ochib darhol tizimga kiritamiz!
+      return this.registerUser({ username: raw, name: raw });
     }
 
     this.setUser(user);

@@ -3359,8 +3359,7 @@ class AntivirusApp {
         return;
       }
 
-      const clean = raw.toLowerCase().replace(/[^a-z0-9_.]/g, '');
-      if (clean.length < 2) {
+      if (raw.length < 2) {
         if (feedback) {
           feedback.className = 'auth-live-feedback error';
           feedback.textContent = '⚠️ Ism kamida 2 ta belgidan iborat bo‘lsin';
@@ -3372,20 +3371,21 @@ class AntivirusApp {
         return;
       }
 
+      const clean = store.cleanUsernameString(raw);
       const isTaken = store.isUsernameTaken(clean);
       if (isTaken) {
         if (feedback) {
-          feedback.className = 'auth-live-feedback error';
-          feedback.textContent = `❌ «${clean}» allaqachon band! Boshqa nom tanlang (masalan: ${clean}_uz, ${clean}7)`;
+          feedback.className = 'auth-live-feedback';
+          feedback.textContent = `ℹ️ «${clean}» mavjud, sizga yangi unikal ID (${clean}_2...) biriktiriladi`;
         }
         if (badge) {
-          badge.textContent = 'Band ❌';
-          badge.style.color = '#EF4444';
+          badge.textContent = 'Unikal ID ✓';
+          badge.style.color = '#22C55E';
         }
       } else {
         if (feedback) {
           feedback.className = 'auth-live-feedback success';
-          feedback.textContent = `✓ «${clean}» bo‘sh! Ushbu nom bilan unikal ID beriladi`;
+          feedback.textContent = `✓ «${raw}» qabul qilinadi. Sizga maxsus ID biriktiriladi`;
         }
         if (badge) {
           badge.textContent = 'Bo‘sh ✓';
