@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   CF_API_URL: 'antivirus_cloudflare_api_url',
   DELETED_IDS: 'antivirus_news_deleted_ids',
   USER: 'antivirus_auth_user',
+  USERS_DB: 'antivirus_registered_users',
   GOOGLE_CLIENT_ID: 'antivirus_google_client_id'
 };
 
@@ -407,14 +408,6 @@ class NewsStore {
     return found ? found.name : (categoryId.charAt(0).toUpperCase() + categoryId.slice(1));
   }
 
-  getSavedIds() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.SAVED)) || [];
-    } catch {
-      return [];
-    }
-  }
-
   getTheme() {
     return localStorage.getItem(STORAGE_KEYS.THEME) || 'dark';
   }
@@ -447,21 +440,163 @@ class NewsStore {
     this.notify();
   }
 
+  getSavedIds() {
+    try {
+      if (typeof localStorage === 'undefined') return [];
+      const user = this.getUser();
+      const userKey = user && user.id ? `${STORAGE_KEYS.SAVED}_${user.id}` : STORAGE_KEYS.SAVED;
+      const stored = localStorage.getItem(userKey);
+      if (stored) return JSON.parse(stored);
+      // Agar yangi foydalanuvchi bo'lsa va hali saqlamagan bo'lsa, umumiy saqlanganlardan ko'chiramiz
+      if (user && user.id) {
+        const guestData = localStorage.getItem(STORAGE_KEYS.SAVED);
+        const guestList = guestData ? JSON.parse(guestData) : [];
+        if (guestList.length > 0) {
+          localStorage.setItem(userKey, JSON.stringify(guestList));
+          return guestList;
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
   toggleSaveNews(id) {
     let saved = this.getSavedIds();
+    const user = this.getUser();
     if (saved.includes(id)) {
       saved = saved.filter(savedId => savedId !== id);
     } else {
       saved.push(id);
     }
+    const userKey = user && user.id ? `${STORAGE_KEYS.SAVED}_${user.id}` : STORAGE_KEYS.SAVED;
+    localStorage.setItem(userKey, JSON.stringify(saved));
     localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(saved));
     this.notify();
     return saved.includes(id);
   }
 
   // =========================================================================
-  // FOYDALANUVCHI VA GOOGLE AUTH METODLARI
+  // FOYDALANUVCHILAR BAZASI VA AUTH (KIRISH / RO'YXATDAN O'TISH)
   // =========================================================================
+
+  getRegisteredUsers() {
+    try {
+      if (typeof localStorage === 'undefined') return [];
+      const data = localStorage.getItem(STORAGE_KEYS.USERS_DB);
+      if (data) {
+        return JSON.parse(data);
+      }
+      const initialUsers = [
+        {
+          id: 'an_usr_antivirus_1001',
+          username: 'antivirus',
+          name: 'ANTIVIRUS Tahririyati',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+          role: 'admin',
+          provider: 'system',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(initialUsers));
+      return initialUsers;
+    } catch {
+      return [];
+    }
+  }
+
+  saveRegisteredUser(user) {
+    try {
+      const users = this.getRegisteredUsers();
+      const existingIdx = users.findIndex(u => 
+        (user.id && u.id === user.id) || 
+        (user.username && u.username && u.username.toLowerCase() === user.username.toLowerCase())
+      );
+      if (existingIdx >= 0) {
+        users[existingIdx] = { ...users[existingIdx], ...user };
+      } else {
+        users.push(user);
+      }
+      localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(users));
+    } catch (e) {
+      console.error('Foydalanuvchini saqlashda xatolik:', e);
+    }
+  }
+
+  findUser(query) {
+    if (!query) return null;
+    const clean = query.trim().toLowerCase().replace(/^@/, '');
+    const users = this.getRegisteredUsers();
+    return users.find(u => 
+      (u.username && u.username.toLowerCase() === clean) ||
+      (u.id && u.id.toLowerCase() === clean) ||
+      (u.name && u.name.toLowerCase() === clean)
+    ) || null;
+  }
+
+  isUsernameTaken(username) {
+    if (!username) return false;
+    const clean = username.trim().toLowerCase().replace(/^@/, '');
+    const users = this.getRegisteredUsers();
+    return users.some(u => u.username && u.username.toLowerCase() === clean);
+  }
+
+  registerUser({ username, name, avatar }) {
+    const rawUsername = (username || '').trim();
+    if (!rawUsername) {
+      return { ok: false, error: 'Iltimos, ism yoki taxallus kiriting!' };
+    }
+    const cleanUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+    if (cleanUsername.length < 2) {
+      return { ok: false, error: 'Ism/taxallus kamida 2 ta harf yoki raqamdan iborat bo‘lishi kerak!' };
+    }
+
+    if (this.isUsernameTaken(cleanUsername)) {
+      return { 
+        ok: false, 
+        error: `«${rawUsername}» nomli foydalanuvchi allaqachon mavjud! Iltimos, boshqa nom tanlang (masalan: ${cleanUsername}_uz yoki ${cleanUsername}7).` 
+      };
+    }
+
+    // Har bir odamga usha ism/nomga qarab unikal ID beriladi
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const uniqueId = `an_${cleanUsername}_${randomSuffix}`;
+    const displayName = (name && name.trim()) || rawUsername;
+
+    const newUser = {
+      id: uniqueId,
+      username: cleanUsername,
+      name: displayName,
+      avatar: avatar || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80`,
+      role: 'member',
+      provider: 'antivirus',
+      createdAt: new Date().toISOString()
+    };
+
+    this.saveRegisteredUser(newUser);
+    this.setUser(newUser);
+
+    return { ok: true, user: newUser };
+  }
+
+  loginUser(identifier) {
+    const raw = (identifier || '').trim();
+    if (!raw) {
+      return { ok: false, error: 'Iltimos, ismingiz yoki taxallusingizni kiriting!' };
+    }
+
+    const user = this.findUser(raw);
+    if (!user) {
+      return { 
+        ok: false, 
+        error: `«${raw}» nomli foydalanuvchi topilmadi. «Tezkor Ro‘yxatdan O‘tish» bo‘limidan yangi hisob ochishingiz mumkin!` 
+      };
+    }
+
+    this.setUser(user);
+    return { ok: true, user };
+  }
 
   getUser() {
     try {
@@ -478,9 +613,13 @@ class NewsStore {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
       }
+      if (user && user.id) {
+        this.saveRegisteredUser(user);
+      }
+      const providerLabel = user.provider === 'google' ? 'Google' : 'ANTIVIRUS ID';
       this.addNotification({
         title: 'Xush kelibsiz!',
-        text: `${user.name || 'Foydalanuvchi'} (Google) orqali tizimga kirdingiz`,
+        text: `${user.name || 'Foydalanuvchi'} (${providerLabel}) orqali tizimga kirdingiz`,
         time: 'Hozirgina'
       });
       this.notify();
@@ -496,7 +635,7 @@ class NewsStore {
       }
       this.addNotification({
         title: 'Tizimdan chiqildi',
-        text: 'Google hisobingizdan muvaffaqiyatli chiqdingiz',
+        text: 'Hisobingizdan muvaffaqiyatli chiqdingiz',
         time: 'Hozirgina'
       });
       this.notify();

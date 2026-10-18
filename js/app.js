@@ -172,10 +172,18 @@ class AntivirusApp {
     this.speechSynth = window.speechSynthesis;
     this.isAudioPlaying = false;
 
-    // Google Auth va Foydalanuvchi profili holatlari
+    // Auth va Foydalanuvchi profili holatlari (Kirish vs Tezkor Ro'yxatdan o'tish)
     this.isAuthModalOpen = false;
     this.isProfileDropdownOpen = false;
-    this.authModalTab = 'login'; // 'login' | 'client_id'
+    this.authModalTab = 'login'; // 'login' | 'register' | 'client_id'
+    this.selectedAvatarIndex = 0;
+    this.avatarPresets = [
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'
+    ];
 
     // Video & Rasm yuklash holatlari
     this.videoUploadMode = 'url'; // 'url' | 'file'
@@ -736,8 +744,17 @@ class AntivirusApp {
                       <img src="${user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}" class="dropdown-avatar-lg" alt="${user.name}" />
                       <div class="user-dropdown-info">
                         <div class="user-dropdown-name">${user.name}</div>
-                        <div class="user-dropdown-email">${user.email || 'google.user@gmail.com'}</div>
-                        <div class="google-verified-pill">${Icons.google} <span>Google orqali faol</span></div>
+                        <div class="user-dropdown-email">${user.email || (user.username ? '@' + user.username : 'ANTIVIRUS Foydalanuvchi')}</div>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px;">
+                          ${user.provider === 'google' ? `
+                            <div class="google-verified-badge">${Icons.google} <span>Google orqali faol</span></div>
+                          ` : `
+                            <div class="google-verified-badge" style="color: var(--an-red); background: rgba(229, 9, 20, 0.1);">
+                              <span>🛡️ ANTIVIRUS ID</span>
+                            </div>
+                          `}
+                          <span class="user-id-badge">${user.id || ('#' + (user.username || 'user'))}</span>
+                        </div>
                       </div>
                     </div>
                     <div class="user-dropdown-actions">
@@ -1166,8 +1183,17 @@ class AntivirusApp {
             </div>
             <div class="menu-user-info">
               <div class="menu-user-name">${user.name}</div>
-              <div class="menu-user-email">${user.email || 'google.user@gmail.com'}</div>
-              <div class="google-verified-badge">${Icons.google} <span>Google orqali faol</span></div>
+              <div class="menu-user-email">${user.email || (user.username ? '@' + user.username : 'ANTIVIRUS Foydalanuvchi')}</div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                ${user.provider === 'google' ? `
+                  <div class="google-verified-badge">${Icons.google} <span>Google orqali faol</span></div>
+                ` : `
+                  <div class="google-verified-badge" style="color: var(--an-red); background: rgba(229, 9, 20, 0.1);">
+                    <span>🛡️ ANTIVIRUS ID</span>
+                  </div>
+                `}
+                <span class="user-id-badge">${user.id || ('#' + (user.username || 'user'))}</span>
+              </div>
             </div>
             <button type="button" class="menu-logout-quick-btn" id="menuLogoutBtn" title="Tizimdan chiqish">
               ${Icons.logOut}
@@ -1175,14 +1201,14 @@ class AntivirusApp {
           </div>
         ` : `
           <div class="menu-google-login-card" id="menuGoogleLoginCard" style="cursor: pointer;">
-            <div class="menu-google-login-icon">
-              ${Icons.google}
+            <div class="auth-brand-badge" style="width: 40px; height: 40px; font-size: 14px; border-radius: 10px;">
+              AN
             </div>
             <div class="menu-google-login-info">
-              <span class="menu-google-login-title">Google orqali kiring</span>
-              <span class="menu-google-login-desc">Shaxsiy maqola, video va saqlanganlarni sinxronlash</span>
+              <span class="menu-google-login-title">Kirish yoki Ro‘yxatdan o‘tish</span>
+              <span class="menu-google-login-desc">Tezkor nom yoki Google orqali shaxsiy hisobga ulanish</span>
             </div>
-            <button type="button" class="menu-google-pill-btn">Kirish</button>
+            <button type="button" class="menu-google-pill-btn" style="background: var(--an-red);">Kirish</button>
           </div>
         `}
 
@@ -2203,49 +2229,56 @@ class AntivirusApp {
   }
 
   // -------------------------------------------------------------
-  // 7. GOOGLE AUTH VA PROFIL OYNASI (MODAL)
+  // 7. GOOGLE & ANTIVIRUS ID AUTH OYNASI (KIRISH VA TEZKOR RO'YXATDAN O'TISH)
   // -------------------------------------------------------------
   renderGoogleAuthModal() {
     if (!this.isAuthModalOpen) return '';
 
     const user = store.getUser();
     const clientId = store.getGoogleClientId();
+    const savedCount = store.getSavedIds().length;
 
     return `
       <div class="article-reader-backdrop open" id="authModalBackdrop">
-        <div class="article-reader-modal auth-modal-dialog" id="authModalDialog" style="max-width: 440px; padding: 0; overflow: hidden; border-radius: 20px;">
+        <div class="article-reader-modal auth-modal-dialog" id="authModalDialog" style="max-width: 440px; padding: 0; overflow: hidden; border-radius: 24px; box-shadow: 0 25px 60px rgba(0,0,0,0.45);">
           <!-- Modal Header -->
           <div class="auth-modal-header">
             <div class="auth-header-brand">
-              <div class="auth-google-circle">${Icons.google}</div>
+              <div class="auth-brand-badge">AN</div>
               <div>
-                <h3 class="auth-header-title">Google bilan kirish</h3>
-                <p class="auth-header-sub">ANTIVIRUS NEWS portaliga ulanish</p>
+                <h3 class="auth-header-title">ANTIVIRUS ID</h3>
+                <p class="auth-header-sub">Shaxsiy hisob va tezkor tizim</p>
               </div>
             </div>
             <button type="button" class="close-modal-round" id="closeAuthModalBtn">✕</button>
           </div>
 
-          <!-- Tabs: Kirish vs Client ID sozlamasi -->
-          <div class="admin-tabs-nav" style="padding: 8px 16px 0; border-bottom: 1px solid var(--border-subtle);">
-            <button type="button" class="admin-tab-btn ${this.authModalTab === 'login' ? 'active' : ''}" id="authTabLoginBtn">
-              <span>🔐 Kirish</span>
-            </button>
-            <button type="button" class="admin-tab-btn ${this.authModalTab === 'client_id' ? 'active' : ''}" id="authTabSettingsBtn">
-              <span>⚙️ Google Client ID</span>
-            </button>
-          </div>
-
-          <div class="admin-modal-body" style="padding: 20px;">
-            ${user ? `
-              <!-- ALLAQACHON TIZIMGA KIRGAN -->
+          ${user ? `
+            <!-- ALLAQACHON TIZIMGA KIRGAN HOLAT -->
+            <div class="admin-modal-body" style="padding: 24px 20px 20px;">
               <div class="auth-logged-in-box">
                 <img src="${user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}" class="auth-avatar-preview" alt="${user.name}" />
-                <h4 style="margin: 10px 0 2px; font-weight: 800; font-size: 17px; color: var(--text-main);">${user.name}</h4>
-                <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 10px;">${user.email || 'google.user@gmail.com'}</div>
-                <div class="google-verified-pill" style="margin: 0 auto 16px;">
-                  ${Icons.google} <span>Google orqali faol</span>
+                <h4 style="margin: 12px 0 2px; font-weight: 800; font-size: 18px; color: var(--text-main);">${user.name}</h4>
+                <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 6px;">
+                  ${user.email || (user.username ? '@' + user.username : 'ANTIVIRUS Foydalanuvchi')}
                 </div>
+                
+                <div style="display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
+                  ${user.provider === 'google' ? `
+                    <div class="google-verified-badge">${Icons.google} <span>Google orqali faol</span></div>
+                  ` : `
+                    <div class="google-verified-badge" style="color: var(--an-red); background: rgba(229, 9, 20, 0.1);">
+                      <span>🛡️ ANTIVIRUS ID</span>
+                    </div>
+                  `}
+                  <span class="user-id-badge">${user.id || ('#' + (user.username || 'user'))}</span>
+                </div>
+
+                <div style="background: var(--bg-pill); padding: 10px 14px; border-radius: 12px; margin-bottom: 16px; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-around;">
+                  <span>🔖 Saqlanganlar: <b>${savedCount} ta</b></span>
+                  <span>🛡️ Holat: <b style="color: #22C55E;">Onlayn</b></span>
+                </div>
+
                 <div style="display: flex; gap: 8px;">
                   <button type="button" class="btn-primary-red" id="modalAuthContinueBtn" style="flex: 1;">
                     ✓ Davom etish
@@ -2255,58 +2288,165 @@ class AntivirusApp {
                   </button>
                 </div>
               </div>
-            ` : (this.authModalTab === 'login' ? `
-              <!-- LOGIN TAB -->
-              <div class="auth-perks-list">
-                <div class="auth-perk-item">
-                  <span>✍️</span> <span>Shaxsiy maqola va videolaringiz nomingiz bilan saqlanadi</span>
-                </div>
-                <div class="auth-perk-item">
-                  <span>🔖</span> <span>Saqlangan maqolalar barcha qurilmalaringizda saqlanadi</span>
-                </div>
-                <div class="auth-perk-item">
-                  <span>🛡️</span> <span>ANTIVIRUS tahririyati va boshqaruv paneliga to‘liq ruxsat</span>
-                </div>
-              </div>
-
-              <!-- Rasmiy Google Identity Tugmasi (agar Client ID bo'lsa) -->
-              <div id="googleOfficialBtnContainer" style="display: flex; justify-content: center; margin: 10px 0; min-height: 40px;"></div>
-
-              <!-- 1-Click Tezkor Google Kirish Tugmasi -->
-              <button type="button" class="btn-google-action" id="fastGoogleLoginBtn">
-                ${Icons.google}
-                <span>Google hisobim bilan kirish</span>
+            </div>
+          ` : `
+            <!-- 2 TA ZAMONAVIY REJIM TABI (KIRISH VA TEZKOR RO'YXATDAN O'TISH) -->
+            <div class="auth-segmented-nav">
+              <button type="button" class="auth-segment-btn ${this.authModalTab === 'login' ? 'active' : ''}" id="authTabLoginBtn">
+                🔑 Kirish
               </button>
-
-              <div style="text-align: center; margin-top: 14px; font-size: 11px; color: var(--text-dim); line-height: 1.4;">
-                Google orqali kirishda parolingiz talab qilinmaydi va maxfiylik kafolatlanadi.
-              </div>
-            ` : `
-              <!-- GOOGLE CLIENT ID SOZLAMASI -->
-              <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.4;">
-                Google Cloud Console (OAuth 2.0 Web Client ID) orqali rasmiy Google tugmasini sozlang:
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Google OAuth 2.0 Web Client ID</label>
-                <input
-                  type="text"
-                  id="googleClientIdInput"
-                  class="form-input"
-                  placeholder="masalan: 123456789-abc.apps.googleusercontent.com"
-                  value="${clientId}"
-                />
-              </div>
-
-              <button type="button" class="btn-primary-red" id="saveGoogleClientIdBtn" style="width: 100%;">
-                <span>💾 Client ID ni Saqlash</span>
+              <button type="button" class="auth-segment-btn ${this.authModalTab === 'register' ? 'active' : ''}" id="authTabRegisterBtn">
+                🚀 Tezkor Ro‘yxatdan O‘tish
               </button>
+            </div>
 
-              <div style="margin-top: 12px; font-size: 11px; color: var(--text-dim); line-height: 1.5; background: var(--bg-pill); padding: 10px 12px; border-radius: 8px;">
-                💡 <b>Ko‘rsatma:</b> <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color: #4285F4; text-decoration: underline;">Google Cloud Console</a> da <i>OAuth Client ID (Web Application)</i> yaratib, <i>Authorized JavaScript Origins</i> ga ushbu sayt domenini qo‘shing.
+            <div class="admin-modal-body" style="padding: 14px 20px 20px;">
+              ${this.authModalTab === 'login' ? `
+                <!-- 1. KIRISH REJIMI -->
+                <div class="auth-form-wrap">
+                  <div class="auth-field-group">
+                    <label class="auth-field-label">Ismingiz yoki Taxallusingiz (@login)</label>
+                    <div class="auth-input-wrapper">
+                      <span class="auth-input-icon">👤</span>
+                      <input
+                        type="text"
+                        id="authLoginInput"
+                        class="auth-text-input"
+                        placeholder="Masalan: azamat yoki sardor"
+                        autocomplete="username"
+                      />
+                    </div>
+                    <div class="auth-live-feedback">Oldin ro‘yxatdan o‘tgan ism yoki taxallusingizni kiriting</div>
+                  </div>
+
+                  <button type="button" class="btn-primary-red auth-submit-btn" id="submitLoginBtn">
+                    <span>🔑 Tizimga Kirish</span>
+                  </button>
+
+                  <div class="auth-divider">
+                    <span>YOKI GOOGLE BILAN</span>
+                  </div>
+
+                  <!-- Rasmiy Google Identity Tugmasi -->
+                  <div id="googleOfficialBtnContainer" style="display: flex; justify-content: center; margin-bottom: 6px; min-height: 40px;"></div>
+
+                  <!-- 1-Click Tezkor Google Kirish Tugmasi -->
+                  <button type="button" class="btn-google-action" id="fastGoogleLoginBtn">
+                    ${Icons.google}
+                    <span>Google hisobim bilan kirish</span>
+                  </button>
+
+                  <div class="auth-switch-prompt">
+                    Hali hisobingiz yo‘qmi?
+                    <button type="button" class="auth-switch-link" id="switchToRegBtn">Tezkor ro‘yxatdan o‘tish</button>
+                  </div>
+                </div>
+              ` : (this.authModalTab === 'register' ? `
+                <!-- 2. TEZKOR RO'YXATDAN O'TISH REJIMI -->
+                <div class="auth-form-wrap">
+                  <div class="auth-info-banner">
+                    ✨ Istalgan nom tanlang! Har bir foydalanuvchiga <b>takrorlanmas unikal ID</b> beriladi va barcha ma’lumotlaringiz (saqlanganlar, maqolalar) profilingizda to‘g‘ri saqlanadi.
+                  </div>
+
+                  <div class="auth-field-group">
+                    <label class="auth-field-label">
+                      <span>Unikal Taxallus / Ism (Login)</span>
+                      <span class="auth-status-badge" id="authRegStatusBadge">Majburiy</span>
+                    </label>
+                    <div class="auth-input-wrapper">
+                      <span class="auth-input-icon">@</span>
+                      <input
+                        type="text"
+                        id="authRegUsernameInput"
+                        class="auth-text-input"
+                        placeholder="Masalan: azamat, sardor, media..."
+                        autocomplete="off"
+                      />
+                    </div>
+                    <div class="auth-live-feedback" id="authRegLiveFeedback">Ism yoki taxallus kiriting (takrorlanmaydigan bo‘lishi shart)</div>
+                  </div>
+
+                  <div class="auth-field-group">
+                    <label class="auth-field-label">To‘liq Ismingiz (Maqolalarda ko‘rinadi)</label>
+                    <div class="auth-input-wrapper">
+                      <span class="auth-input-icon">✍️</span>
+                      <input
+                        type="text"
+                        id="authRegDisplayNameInput"
+                        class="auth-text-input"
+                        placeholder="Masalan: Azamat Karimov"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Avatar tanlash qatori -->
+                  <div class="auth-field-group">
+                    <label class="auth-field-label">Profil Avatari (Bosing va tanlang)</label>
+                    <div class="auth-avatars-row">
+                      ${this.avatarPresets.map((url, idx) => `
+                        <img
+                          src="${url}"
+                          class="auth-avatar-choice ${this.selectedAvatarIndex === idx ? 'selected' : ''}"
+                          data-avatar-preset-idx="${idx}"
+                          alt="Avatar ${idx + 1}"
+                          title="Avatar ${idx + 1}"
+                        />
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <button type="button" class="btn-primary-red auth-submit-btn" id="submitRegisterBtn">
+                    <span>🚀 Ro‘yxatdan O‘tish va Kirish</span>
+                  </button>
+
+                  <div class="auth-divider">
+                    <span>YOKI GOOGLE BILAN</span>
+                  </div>
+
+                  <button type="button" class="btn-google-action" id="fastGoogleRegBtn">
+                    ${Icons.google}
+                    <span>Google orqali 1-bosishda ochish</span>
+                  </button>
+
+                  <div class="auth-switch-prompt">
+                    Allaqachon hisobingiz bormi?
+                    <button type="button" class="auth-switch-link" id="switchToLoginBtn">Kirish</button>
+                  </div>
+                </div>
+              ` : `
+                <!-- DEVELOPER / GOOGLE CLIENT ID SOZLAMASI -->
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.4;">
+                  Google OAuth 2.0 Web Client ID sozlamasi:
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Google OAuth 2.0 Web Client ID</label>
+                  <input
+                    type="text"
+                    id="googleClientIdInput"
+                    class="form-input"
+                    value="${clientId}"
+                  />
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn-primary-red" id="saveGoogleClientIdBtn" style="flex: 1;">
+                    <span>💾 Saqlash</span>
+                  </button>
+                  <button type="button" class="btn-outline-pill" id="backToLoginTabBtn">
+                    ← Orqaga
+                  </button>
+                </div>
+              `)}
+
+              <!-- Pastki mayda sozlama havolasi -->
+              <div style="text-align: center; margin-top: 14px;">
+                <button type="button" id="openDevSettingsBtn" style="background: none; border: none; font-size: 10.5px; color: var(--text-dim); cursor: pointer; text-decoration: underline; font-family: inherit;">
+                  ⚙️ Google OAuth sozlamasi
+                </button>
               </div>
-            `)}
-          </div>
+            </div>
+          `}
         </div>
       </div>
     `;
@@ -3182,7 +3322,7 @@ class AntivirusApp {
       });
     });
 
-    // 20. Google Auth va Foydalanuvchi Profili
+    // 20. Google Auth & ANTIVIRUS ID (Kirish va Tezkor Ro'yxatdan o'tish)
     document.getElementById('desktopAdminBtn')?.addEventListener('click', () => {
       this.openCfModal('stats');
     });
@@ -3247,15 +3387,139 @@ class AntivirusApp {
       }
     });
 
+    // Tab almashtirish: Kirish vs Tezkor Ro'yxatdan o'tish
     document.getElementById('authTabLoginBtn')?.addEventListener('click', () => {
       this.authModalTab = 'login';
       this.render();
       this.setupGoogleIdentityBtn();
     });
 
-    document.getElementById('authTabSettingsBtn')?.addEventListener('click', () => {
+    document.getElementById('authTabRegisterBtn')?.addEventListener('click', () => {
+      this.authModalTab = 'register';
+      this.render();
+    });
+
+    document.getElementById('switchToRegBtn')?.addEventListener('click', () => {
+      this.authModalTab = 'register';
+      this.render();
+    });
+
+    document.getElementById('switchToLoginBtn')?.addEventListener('click', () => {
+      this.authModalTab = 'login';
+      this.render();
+      this.setupGoogleIdentityBtn();
+    });
+
+    document.getElementById('openDevSettingsBtn')?.addEventListener('click', () => {
       this.authModalTab = 'client_id';
       this.render();
+    });
+
+    document.getElementById('backToLoginTabBtn')?.addEventListener('click', () => {
+      this.authModalTab = 'login';
+      this.render();
+      this.setupGoogleIdentityBtn();
+    });
+
+    // Avatar preset tanlash
+    document.querySelectorAll('[data-avatar-preset-idx]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute('data-avatar-preset-idx'), 10);
+        if (!isNaN(idx)) {
+          this.selectedAvatarIndex = idx;
+          document.querySelectorAll('.auth-avatar-choice').forEach((el, i) => {
+            el.classList.toggle('selected', i === idx);
+          });
+        }
+      });
+    });
+
+    // Tezkor Ro'yxatdan o'tishda nomning band yoki bo'shligini jonli tekshirish (Unique check)
+    const regInput = document.getElementById('authRegUsernameInput');
+    regInput?.addEventListener('input', (e) => {
+      const raw = e.target.value.trim();
+      const feedback = document.getElementById('authRegLiveFeedback');
+      const badge = document.getElementById('authRegStatusBadge');
+      if (!raw) {
+        if (feedback) {
+          feedback.className = 'auth-live-feedback';
+          feedback.textContent = 'Ism yoki taxallus kiriting (takrorlanmaydigan bo‘lishi shart)';
+        }
+        if (badge) {
+          badge.textContent = 'Majburiy';
+          badge.style.color = 'var(--text-dim)';
+        }
+        return;
+      }
+
+      const clean = raw.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+      if (clean.length < 2) {
+        if (feedback) {
+          feedback.className = 'auth-live-feedback error';
+          feedback.textContent = '⚠️ Ism/taxallus kamida 2 ta belgidan iborat bo‘lsin';
+        }
+        if (badge) {
+          badge.textContent = 'Kalta ⚠️';
+          badge.style.color = '#EF4444';
+        }
+        return;
+      }
+
+      const isTaken = store.isUsernameTaken(clean);
+      if (isTaken) {
+        if (feedback) {
+          feedback.className = 'auth-live-feedback error';
+          feedback.textContent = `❌ «${clean}» allaqachon band! Boshqa nom tanlang (masalan: ${clean}_uz, ${clean}7)`;
+        }
+        if (badge) {
+          badge.textContent = 'Band ❌';
+          badge.style.color = '#EF4444';
+        }
+      } else {
+        if (feedback) {
+          feedback.className = 'auth-live-feedback success';
+          feedback.textContent = `✓ «${clean}» bo‘sh! Ushbu nom bilan unikal ID yaratiladi`;
+        }
+        if (badge) {
+          badge.textContent = 'Bo‘sh ✓';
+          badge.style.color = '#22C55E';
+        }
+      }
+    });
+
+    // 1. Tizimga Kirish tugmasi
+    document.getElementById('submitLoginBtn')?.addEventListener('click', () => {
+      const identifier = document.getElementById('authLoginInput')?.value.trim();
+      const result = store.loginUser(identifier);
+      if (result.ok) {
+        this.closeAuthModal();
+        this.showToast(`🎉 Xush kelibsiz, ${result.user.name}!`);
+      } else {
+        this.showToast(`⚠️ ${result.error}`);
+      }
+    });
+
+    // 2. Tezkor Ro'yxatdan o'tish tugmasi
+    document.getElementById('submitRegisterBtn')?.addEventListener('click', () => {
+      const username = document.getElementById('authRegUsernameInput')?.value.trim();
+      const displayName = document.getElementById('authRegDisplayNameInput')?.value.trim();
+      const avatar = this.avatarPresets[this.selectedAvatarIndex] || this.avatarPresets[0];
+
+      const result = store.registerUser({ username, name: displayName, avatar });
+      if (result.ok) {
+        this.closeAuthModal();
+        this.showToast(`🎉 Tabriklaymiz, @${result.user.username}! Sizga unikal ID (${result.user.id}) biriktirildi.`);
+      } else {
+        this.showToast(`⚠️ ${result.error}`);
+      }
+    });
+
+    // Enter klavishasi bilan qulay yuborish
+    document.getElementById('authLoginInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('submitLoginBtn')?.click();
+    });
+    document.getElementById('authRegUsernameInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('submitRegisterBtn')?.click();
     });
 
     document.getElementById('modalAuthContinueBtn')?.addEventListener('click', () => {
@@ -3270,6 +3534,7 @@ class AntivirusApp {
       this.render();
     });
 
+    // Google Client ID sozlamasini saqlash
     document.getElementById('saveGoogleClientIdBtn')?.addEventListener('click', () => {
       const input = document.getElementById('googleClientIdInput');
       const val = input ? input.value.trim() : '';
@@ -3284,23 +3549,30 @@ class AntivirusApp {
       this.setupGoogleIdentityBtn();
     });
 
-    document.getElementById('fastGoogleLoginBtn')?.addEventListener('click', () => {
-      const promptName = prompt('Ismingiz yoki taxallusingizni kiriting:', 'Foydalanuvchi');
+    // Tezkor Google kirish / ro'yxatdan o'tish funksiyasi
+    const handleFastGoogle = () => {
+      const promptName = prompt('Google hisobingizdagi ismingizni kiriting:', 'Foydalanuvchi');
       if (promptName === null) return;
       const name = promptName.trim() || 'Google Foydalanuvchi';
       const cleanSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '') || 'user';
       const email = `${cleanSlug}@gmail.com`;
-      store.setUser({
-        id: 'fast_g_' + Date.now(),
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const userObj = {
+        id: 'g_' + cleanSlug + '_' + randomSuffix,
+        username: cleanSlug,
         name,
         email,
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
         provider: 'google',
         verified: true
-      });
+      };
+      store.setUser(userObj);
       this.closeAuthModal();
       this.showToast(`🎉 Xush kelibsiz, ${name}!`);
-    });
+    };
+
+    document.getElementById('fastGoogleLoginBtn')?.addEventListener('click', handleFastGoogle);
+    document.getElementById('fastGoogleRegBtn')?.addEventListener('click', handleFastGoogle);
   }
 }
 
