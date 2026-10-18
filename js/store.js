@@ -279,9 +279,22 @@ class NewsStore {
           // O'chirilgan va demo maqolalar qaytib kelmasligini kafolatlash
           const deletedIds = this.getDeletedIds();
           const filtered = cloudNews.filter(n => !deletedIds.includes(n.id) && !DEMO_IDS.includes(n.id));
-          localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(filtered));
+
+          // Mahalliy qo'shilgan yangiliklar o'chib ketmasligi uchun birlashtirish (Merge)
+          const localNews = this.getNews();
+          const map = new Map();
+          // Avval bulutdagi yangiliklar
+          filtered.forEach(item => map.set(item.id, item));
+          // Keyin mahalliy qo'shilgan yangiliklar (hech qachon yo'qolmasligi uchun)
+          localNews.forEach(item => {
+            if (!deletedIds.includes(item.id) && !DEMO_IDS.includes(item.id)) {
+              map.set(item.id, { ...(map.get(item.id) || {}), ...item });
+            }
+          });
+          const merged = Array.from(map.values()).sort((a, b) => this.compareNewest(a, b));
+          localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(merged));
           this.notify();
-          return filtered;
+          return merged;
         }
       }
     } catch (err) {
@@ -379,6 +392,16 @@ class NewsStore {
     }
   }
 
+  getCategoryName(categoryId) {
+    if (!categoryId) return 'Yangilik';
+    if (categoryId === 'all') return 'Barchasi';
+    if (categoryId === 'trend') return 'Trend';
+    if (categoryId === 'video') return 'Video';
+    const cats = this.getCategories();
+    const found = cats.find(c => c.id === categoryId);
+    return found ? found.name : (categoryId.charAt(0).toUpperCase() + categoryId.slice(1));
+  }
+
   getSavedIds() {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEYS.SAVED)) || [];
@@ -464,8 +487,8 @@ class NewsStore {
       isTrending: Boolean(newsData.isTrending),
       isSlider: Boolean(newsData.isSlider),
       title: newsData.title,
-      category: newsData.category,
-      categoryName: this.getCategoryName(newsData.category),
+      category: newsData.category || 'video',
+      categoryName: newsData.categoryName || this.getCategoryName(newsData.category || 'video'),
       imageUrl: newsData.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80',
       summary: newsData.summary || '',
       content: newsData.content || '',
