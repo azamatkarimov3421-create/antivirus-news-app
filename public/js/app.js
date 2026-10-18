@@ -152,6 +152,9 @@ class AntivirusApp {
     }
 
     this.render();
+
+    // Markaziy Bank rasmiy API kurslarini yuklash
+    store.fetchLiveCbuRates();
   }
 
   toggleTheme() {
@@ -789,30 +792,8 @@ class AntivirusApp {
             </div>
           </div>
 
-          <!-- Widget 3: Valyuta Kurslari -->
-          <div class="sidebar-widget info-ticker-widget">
-            <div class="widget-header">
-              <span class="widget-icon">📈</span>
-              <h3 class="widget-title">Markaziy Bank Kurslari</h3>
-            </div>
-            <div class="currency-rates-grid">
-              <div class="currency-rate-item">
-                <span class="curr-flag">🇺🇸 USD</span>
-                <span class="curr-val">12 850</span>
-                <span class="curr-diff up">▲ +12</span>
-              </div>
-              <div class="currency-rate-item">
-                <span class="curr-flag">🇪🇺 EUR</span>
-                <span class="curr-val">13 920</span>
-                <span class="curr-diff up">▲ +18</span>
-              </div>
-              <div class="currency-rate-item">
-                <span class="curr-flag">🇷🇺 RUB</span>
-                <span class="curr-val">132.5</span>
-                <span class="curr-diff down">▼ -0.3</span>
-              </div>
-            </div>
-          </div>
+          <!-- Widget 3: Markaziy Bank Rasmiy Valyuta Kurslari -->
+          ${this.renderRatesWidget()}
 
           <!-- Widget 4: Ijtimoiy Tarmoqlar -->
           <div class="sidebar-widget social-widget">
@@ -832,6 +813,39 @@ class AntivirusApp {
             </div>
           </div>
         </aside>
+      </div>
+    `;
+  }
+
+  // -------------------------------------------------------------
+  // MARKAZIY BANK (CBU.UZ) RASMIY VALYUTA KURSLARI WIDGETI
+  // -------------------------------------------------------------
+  renderRatesWidget() {
+    const cbu = store.getCbuRates();
+    const rates = cbu.rates || [];
+    return `
+      <div class="sidebar-widget info-ticker-widget" style="margin-bottom: 20px;">
+        <div class="widget-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="widget-icon">📈</span>
+            <h3 class="widget-title">Markaziy Bank Kurslari</h3>
+          </div>
+          <span class="widget-sub-badge" title="Rasmiy CBU.UZ API">${cbu.date || ''}</span>
+        </div>
+        <div class="currency-rates-grid">
+          ${rates.map(r => {
+            const isUp = !String(r.Diff).startsWith('-');
+            const diffFormatted = isUp ? `▲ +${r.Diff}` : `▼ ${r.Diff}`;
+            const formattedRate = Number(r.Rate).toLocaleString('uz-UZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return `
+              <div class="currency-rate-item" title="${r.name || r.Ccy}: ${formattedRate} so‘m">
+                <span class="curr-flag">${r.flag || '🌐'} ${r.Ccy}</span>
+                <span class="curr-val">${formattedRate}</span>
+                <span class="curr-diff ${isUp ? 'up' : 'down'}">${diffFormatted}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
       </div>
     `;
   }
@@ -878,6 +892,9 @@ class AntivirusApp {
             </div>
           `).join('')}
         </div>
+
+        <!-- Markaziy Bank Rasmiy Valyuta Kurslari -->
+        ${this.renderRatesWidget()}
 
         <!-- Rasmdagi Brend Axborot Kartasi -->
         <div class="brand-identity-banner" data-tab-link="home">
@@ -1061,29 +1078,8 @@ class AntivirusApp {
 
         <!-- O'ng Yon Panel (Desktop) -->
         <aside class="desktop-sidebar">
-          <div class="sidebar-widget info-ticker-widget">
-            <div class="widget-header">
-              <span class="widget-icon">📈</span>
-              <h3 class="widget-title">Markaziy Bank Kurslari</h3>
-            </div>
-            <div class="currency-rates-grid">
-              <div class="currency-rate-item">
-                <span class="curr-flag">🇺🇸 USD</span>
-                <span class="curr-val">12 850</span>
-                <span class="curr-diff up">▲ +12</span>
-              </div>
-              <div class="currency-rate-item">
-                <span class="curr-flag">🇪🇺 EUR</span>
-                <span class="curr-val">13 920</span>
-                <span class="curr-diff up">▲ +18</span>
-              </div>
-              <div class="currency-rate-item">
-                <span class="curr-flag">🇷🇺 RUB</span>
-                <span class="curr-val">132.5</span>
-                <span class="curr-diff down">▼ -0.3</span>
-              </div>
-            </div>
-          </div>
+          <!-- Markaziy Bank Rasmiy Valyuta Kurslari -->
+          ${this.renderRatesWidget()}
 
           <div class="sidebar-widget social-widget">
             <div class="widget-header">

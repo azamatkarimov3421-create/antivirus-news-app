@@ -470,10 +470,58 @@ class NewsStore {
     }
   }
 
-  getCategoryName(catId) {
-    const cats = this.getCategories();
-    const found = cats.find(c => c.id === catId);
-    return found ? found.name : 'Yangiliklar';
+  // -------------------------------------------------------------
+  // MARKAZIY BANK (CBU.UZ) RASMIY VALYUTA KURSLARI
+  // -------------------------------------------------------------
+  getCbuRates() {
+    try {
+      const stored = localStorage.getItem('antivirus_news_cbu_rates');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+    return {
+      date: '17.10.2026',
+      rates: [
+        { Ccy: 'USD', Rate: '12055.90', Diff: '44.25', flag: '🇺🇸', name: 'AQSH dollari' },
+        { Ccy: 'EUR', Rate: '13572.53', Diff: '109.87', flag: '🇪🇺', name: 'Evro' },
+        { Ccy: 'RUB', Rate: '144.16', Diff: '0.99', flag: '🇷🇺', name: 'Rossiya rubli' }
+      ]
+    };
+  }
+
+  async fetchLiveCbuRates() {
+    try {
+      const res = await fetch('https://cbu.uz/uz/arkhiv-kursov-valyut/json/');
+      if (!res.ok) throw new Error('CBU API error');
+      const data = await res.json();
+      const flags = { USD: '🇺🇸', EUR: '🇪🇺', RUB: '🇷🇺', GBP: '🇬🇧', KZT: '🇰🇿' };
+      const main = ['USD', 'EUR', 'RUB'];
+      const filtered = data
+        .filter(item => main.includes(item.Ccy))
+        .map(item => ({
+          Ccy: item.Ccy,
+          Rate: item.Rate,
+          Diff: item.Diff,
+          Date: item.Date,
+          flag: flags[item.Ccy] || '🌐',
+          name: item.CcyNm_UZ || item.Ccy
+        }));
+
+      if (filtered.length > 0) {
+        const payload = {
+          date: filtered[0].Date || new Date().toLocaleDateString('uz-UZ'),
+          rates: filtered,
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('antivirus_news_cbu_rates', JSON.stringify(payload));
+        this.notify();
+        return payload;
+      }
+    } catch (e) {
+      console.warn('CBU API yuklashda xatolik:', e.message);
+    }
+    return this.getCbuRates();
   }
 
   getAds() {
