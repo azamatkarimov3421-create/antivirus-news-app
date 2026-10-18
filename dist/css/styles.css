@@ -3465,12 +3465,40 @@ button {
     display: flex !important;
   }
 
-  /* 2 USTUNLI BOY DESKTOP TARTIBI: Chapda Yangiliklar (70%), O'ngda Yon Panel (30%) */
+  /* 2 USTUNLI BOY DESKTOP TARTIBI: Chapda Barcha Yangiliklar, O'ngda Mustaqil Yon Panel */
   .desktop-home-layout {
     display: grid !important;
-    grid-template-columns: 1fr 340px !important;
-    gap: 32px !important;
-    align-items: start !important;
+    grid-template-columns: 1fr 350px !important;
+    gap: 28px !important;
+    align-items: stretch !important;
+    height: calc(100vh - 170px) !important;
+    min-height: 540px !important;
+    overflow: hidden !important;
+  }
+
+  /* Chap Asosiy Ustun — Mustaqil alohida aylanuvchi ustun */
+  .desktop-main-column {
+    height: 100% !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    padding-right: 12px !important;
+    scroll-behavior: smooth !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(229, 9, 20, 0.3) transparent !important;
+  }
+
+  .desktop-main-column::-webkit-scrollbar {
+    width: 6px;
+  }
+  .desktop-main-column::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .desktop-main-column::-webkit-scrollbar-thumb {
+    background: rgba(229, 9, 20, 0.25);
+    border-radius: 4px;
+  }
+  .desktop-main-column::-webkit-scrollbar-thumb:hover {
+    background: var(--an-red);
   }
 
   /* Katta Hero Slayder Kartasi */
@@ -3554,13 +3582,33 @@ button {
     line-height: 1.4 !important;
   }
 
-  /* O'NG YON PANEL (DESKTOP SIDEBAR) */
+  /* O'NG YON PANEL (DESKTOP SIDEBAR) — Mustaqil alohida aylanuvchi ustun */
   .desktop-sidebar {
     display: flex !important;
     flex-direction: column !important;
-    gap: 24px !important;
-    position: sticky !important;
-    top: 86px !important;
+    gap: 20px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    padding-right: 8px !important;
+    scroll-behavior: smooth !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(229, 9, 20, 0.3) transparent !important;
+  }
+
+  .desktop-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .desktop-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .desktop-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(229, 9, 20, 0.25);
+    border-radius: 4px;
+  }
+  .desktop-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--an-red);
   }
 
   .sidebar-widget {

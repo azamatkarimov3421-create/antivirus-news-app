@@ -967,7 +967,7 @@ class AntivirusApp {
     const heroNews = sliderItems[currentHeroIndex] || list[0];
     // Pastida barcha yangiliklar ketma-ket joylashishi (xronologik tartibda)
     const streamNews = list;
-    const topReadNews = store.getTrendingNews().slice(0, 5);
+    const topReadNews = store.getTrendingNews().slice(0, 10);
     const breakingNews = newsList.find(n => n.isTrending) || newsList[0];
 
     return `
