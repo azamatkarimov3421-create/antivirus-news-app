@@ -153,8 +153,10 @@ class AntivirusApp {
 
     this.render();
 
-    // Markaziy Bank rasmiy API kurslarini yuklash
+    // Markaziy Bank rasmiy API kurslarini yuklash va tinimsiz aylanib turuvchi soatni ishga tushirish
     store.fetchLiveCbuRates();
+    this.startLiveClock();
+    this.startCbuAutoRefresh();
   }
 
   toggleTheme() {
@@ -436,6 +438,74 @@ class AntivirusApp {
   }
 
   // -------------------------------------------------------------
+  // JONLI SANA, TINIMSIZ AYLANUVCHI SOAT VA CBU KURSLARI TIKERI
+  // -------------------------------------------------------------
+  renderTopLiveBar() {
+    const cbu = store.getCbuRates();
+    const rates = cbu.rates || [];
+    const usd = rates.find(r => r.Ccy === 'USD');
+    const eur = rates.find(r => r.Ccy === 'EUR');
+    const rub = rates.find(r => r.Ccy === 'RUB');
+
+    const formatDiff = (diff) => {
+      const isUp = !String(diff).startsWith('-');
+      return `<span class="${isUp ? 'rate-up' : 'rate-down'}">${isUp ? '▲+' : '▼'}${diff}</span>`;
+    };
+
+    return `
+      <div class="site-top-bar">
+        <div class="site-top-bar-inner">
+          <div class="top-bar-left">
+            <span class="live-pulse-dot"></span>
+            <span class="live-date-time" id="liveHeaderClock">Yuklanmoqda...</span>
+          </div>
+          <div class="top-bar-right">
+            <div class="top-bar-cbu-ticker">
+              <span class="cbu-ticker-tag" title="O‘zbekiston Respublikasi Markaziy Banki rasmiy kursi">🏛️ CBU:</span>
+              ${usd ? `<span class="cbu-ticker-item">🇺🇸 USD <b>${Number(usd.Rate).toLocaleString('uz-UZ')}</b> ${formatDiff(usd.Diff)}</span>` : ''}
+              ${eur ? `<span class="cbu-ticker-sep">•</span><span class="cbu-ticker-item">🇪🇺 EUR <b>${Number(eur.Rate).toLocaleString('uz-UZ')}</b> ${formatDiff(eur.Diff)}</span>` : ''}
+              ${rub ? `<span class="cbu-ticker-sep">•</span><span class="cbu-ticker-item">🇷🇺 RUB <b>${Number(rub.Rate).toLocaleString('uz-UZ')}</b> ${formatDiff(rub.Diff)}</span>` : ''}
+              <span class="cbu-ticker-date" title="Markaziy Bank rasmiy e’lon qilgan sessiya sanasi">(${cbu.date || ''})</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  updateClockDisplay() {
+    const el = document.getElementById('liveHeaderClock');
+    if (!el) return;
+    const now = new Date();
+    const days = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+    const months = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktyabr', 'noyabr', 'dekabr'];
+    const dayName = days[now.getDay()];
+    const day = now.getDate();
+    const monthName = months[now.getMonth()];
+    const year = now.getFullYear();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    el.textContent = `${dayName}, ${day}-${monthName}, ${year} • ${h}:${m}:${s}`;
+  }
+
+  startLiveClock() {
+    if (this.liveClockTimer) clearInterval(this.liveClockTimer);
+    this.updateClockDisplay();
+    this.liveClockTimer = setInterval(() => {
+      this.updateClockDisplay();
+    }, 1000);
+  }
+
+  startCbuAutoRefresh() {
+    if (this.cbuRefreshTimer) clearInterval(this.cbuRefreshTimer);
+    // Har 10 daqiqada Markaziy Bank rasmiy API sini fonda tekshirib yangilab turish
+    this.cbuRefreshTimer = setInterval(() => {
+      store.fetchLiveCbuRates();
+    }, 10 * 60 * 1000);
+  }
+
+  // -------------------------------------------------------------
   // ASOSIY RENDER QILISH
   // -------------------------------------------------------------
   render() {
@@ -451,6 +521,9 @@ class AntivirusApp {
 
     root.innerHTML = `
       <div class="app-container" data-theme="${theme}">
+        <!-- Top Live Bar: Jonli sana, soat va Markaziy Bank kurslari -->
+        ${this.renderTopLiveBar()}
+
         <!-- 1. Header (Logotip, Desktop Menyu, Qidiruv, Cloudflare, Rejim) -->
         <header class="site-header">
           <div class="site-header-inner">
@@ -590,6 +663,7 @@ class AntivirusApp {
     `;
 
     this.bindEvents();
+    this.updateClockDisplay();
 
     if (this.currentTab === 'home' && !this.activeArticleId && !this.isCfModalOpen) {
       this.startHeroAutoPlay();
@@ -833,6 +907,8 @@ class AntivirusApp {
   renderRatesWidget() {
     const cbu = store.getCbuRates();
     const rates = cbu.rates || [];
+    const now = new Date();
+    const todayStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
     return `
       <div class="sidebar-widget info-ticker-widget" style="margin-bottom: 20px;">
         <div class="widget-header">
@@ -840,7 +916,9 @@ class AntivirusApp {
             <span class="widget-icon">📈</span>
             <h3 class="widget-title">Markaziy Bank Kurslari</h3>
           </div>
-          <span class="widget-sub-badge" title="Rasmiy CBU.UZ API">${cbu.date || ''}</span>
+          <span class="widget-sub-badge" title="Rasmiy CBU.UZ API">
+            <span class="live-pulse-dot" style="display: inline-block; vertical-align: middle; margin-right: 4px;"></span>${cbu.date || todayStr}
+          </span>
         </div>
         <div class="currency-rates-grid">
           ${rates.map(r => {
@@ -855,6 +933,10 @@ class AntivirusApp {
               </div>
             `;
           }).join('')}
+        </div>
+        <div style="margin-top: 10px; font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; justify-content: space-between;">
+          <span>Har ish kuni 16:00 da yangilanadi</span>
+          <span style="color: #10B981; font-weight: 700;">● Jonli CBU API</span>
         </div>
       </div>
     `;
