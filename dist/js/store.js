@@ -135,6 +135,22 @@ class NewsStore {
         }
       }
 
+      // Agar mavjud xabarlar ichida eski video havolalari bo'lsa, ularni toza yangilaymiz
+      if (Array.isArray(currentList)) {
+        let updated = false;
+        currentList.forEach(item => {
+          const fresh = INITIAL_NEWS.find(initItem => initItem.id === item.id);
+          if (fresh && fresh.videoUrl && item.videoUrl !== fresh.videoUrl) {
+            item.videoUrl = fresh.videoUrl;
+            item.aspectRatio = fresh.aspectRatio;
+            updated = true;
+          }
+        });
+        if (updated && typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
+        }
+      }
+
       if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
         localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
       }

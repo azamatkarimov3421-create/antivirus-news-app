@@ -1782,6 +1782,153 @@ button {
   color: #FFF;
 }
 
+/* ==========================================================================
+   UNIVERSAL MEDIA STAGE — Barcha formatlarga (16:9, 9:16, 3:4, 1:1, auto)
+   mukammal mos tushuvchi, tepa-pasti proporsional zamonaviy kino sahnasi
+   ========================================================================== */
+.article-media-stage {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  max-height: 480px;
+  background: #000000;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+
+.article-reader-modal.modal-size-theater .article-media-stage {
+  height: 560px;
+  max-height: 560px;
+}
+
+@media (max-width: 767px) {
+  .article-media-stage {
+    height: 340px !important;
+    max-height: 52vh !important;
+    border-radius: 0 !important;
+    margin-bottom: 14px !important;
+  }
+}
+
+.article-media-backdrop {
+  position: absolute;
+  inset: -30px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(36px) brightness(0.35) saturate(1.4);
+  opacity: 0.85;
+  pointer-events: none;
+  transform: scale(1.15);
+  transition: background-image 0.3s ease;
+}
+
+.article-media-viewport {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+/* 1. 16:9 Gorizontal Format */
+.article-media-viewport.ratio-16-9,
+.article-media-viewport:not([class*="ratio-"]) {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+/* 2. 9:16 Tik / Vertikal Format (Shorts, Reels) */
+.article-media-viewport.ratio-9-16 {
+  width: auto;
+  aspect-ratio: 9 / 16;
+  max-width: 270px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.65);
+}
+
+/* 3. 3:4 Portret Format */
+.article-media-viewport.ratio-3-4 {
+  width: auto;
+  aspect-ratio: 3 / 4;
+  max-width: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* 4. 1:1 Kvadrat Format */
+.article-media-viewport.ratio-1-1 {
+  width: auto;
+  aspect-ratio: 1 / 1;
+  max-width: 460px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* 5. Auto / Fit */
+.article-media-viewport.ratio-auto {
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.article-media-viewport iframe,
+.article-media-viewport video {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.article-media-viewport img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.article-media-viewport.ratio-9-16 img,
+.article-media-viewport.ratio-3-4 img,
+.article-media-viewport.ratio-1-1 img,
+.article-media-viewport.ratio-auto img {
+  object-fit: contain;
+}
+
+.article-media-toolbar {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.media-toolbar-glass {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(14, 15, 20, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 4px 6px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
 /* YouTube Toza 16:9 Cinema Frame — Qora hoshiyalarsiz va buzilmasdan */
 .youtube-cinema-frame {
   position: relative;
@@ -1792,7 +1939,7 @@ button {
   overflow: hidden;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
   margin-bottom: 18px;
-  flex-shrink: 0; /* MUHIM: Flexbox videoni vertikal ezib tashlamasligi uchun qat'iy 16:9 */
+  flex-shrink: 0;
 }
 
 .youtube-cinema-iframe {
@@ -1828,9 +1975,6 @@ button {
   display: block;
 }
 
-/* ==========================================================================
-   Rasmli Xabar Media Frame — Standart 16:9 va O'lchamiga Moslashuvchi Tizim
-   ========================================================================== */
 .article-photo-frame {
   position: relative;
   width: 100%;
@@ -1842,7 +1986,7 @@ button {
   margin-bottom: 18px;
   background: #000000;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
-  flex-shrink: 0; /* QAT'IY QOIDA: Flexbox o'quvchi oynasi ichida rasmni tor chiziqqa ezib qo'ymaydi */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;

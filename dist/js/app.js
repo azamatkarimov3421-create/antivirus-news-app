@@ -433,6 +433,16 @@ class AntivirusApp {
   setPhotoRatio(ratio) {
     this.activePhotoRatio = ratio;
     const norm = ratio.replace(':', '-');
+    const stage = document.getElementById('activeArticleMediaStage');
+    if (stage) {
+      stage.className = stage.className.replace(/\bratio-[^\s]+\b/g, '').trim();
+      stage.classList.add(`ratio-${norm}`);
+    }
+    const viewport = stage?.querySelector('.article-media-viewport');
+    if (viewport) {
+      viewport.className = viewport.className.replace(/\bratio-[^\s]+\b/g, '').trim();
+      viewport.classList.add(`ratio-${norm}`);
+    }
     const frame = document.getElementById('activeArticlePhotoFrame');
     if (frame) {
       frame.className = frame.className.replace(/\bratio-[^\s]+\b/g, '').trim();
@@ -1536,9 +1546,13 @@ class AntivirusApp {
     `;
   }
 
-  // Maqola/Video media renderi (YouTube, Instagram, Telegram, Mahalliy fayl, Rasm)
+  // Maqola/Video media renderi (Barcha formatlar: 16:9, 9:16, 3:4, 1:1, auto ga proporsional moslashuvchan)
   renderArticleMedia(article) {
     const isVideo = !!article.videoUrl || article.category === 'video';
+    const activeRatio = this.activePhotoRatio || article.aspectRatio || '16:9';
+    const normRatio = activeRatio.replace(':', '-');
+
+    let mediaContentHtml = '';
 
     if (article.videoUrl) {
       const parsed = parseVideoEmbed(article.videoUrl) || {
@@ -1547,67 +1561,40 @@ class AntivirusApp {
         thumbnailUrl: article.imageUrl
       };
 
-      // 1. YouTube video — Eng maqbul toza 16:9 Cinema yechimi! (Shorts uchun 9:16)
       if (parsed.type === 'youtube') {
-        const isShort = parsed.isShort || article.videoUrl.includes('/shorts/') || article.aspectRatio === '9:16';
-        return `
-          <div class="youtube-cinema-frame ${isShort ? 'youtube-shorts-frame' : ''}" style="${isShort ? 'aspect-ratio: 9/16; max-width: 360px; margin: 0 auto 18px;' : ''}">
-            <iframe
-              id="activeArticleIframePlayer"
-              src="${parsed.embedUrl}"
-              class="youtube-cinema-iframe"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
-            ></iframe>
-          </div>
+        mediaContentHtml = `
+          <iframe
+            id="activeArticleIframePlayer"
+            src="${parsed.embedUrl}"
+            class="youtube-cinema-iframe"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
         `;
-      }
-
-      // 2. Instagram Reels / Post
-      if (parsed.type === 'instagram') {
-        return `
-          <div class="embed-social-wrap instagram-embed-wrap">
-            <iframe
-              src="${parsed.embedUrl}"
-              class="instagram-iframe"
-              scrolling="no"
-              allowtransparency="true"
-              allowfullscreen
-            ></iframe>
-            <div class="video-direct-link">
-              <a href="${article.sourceUrl || article.videoUrl}" target="_blank" rel="noopener noreferrer">
-                📸 Instagramda to‘liq ko‘rish ↗
-              </a>
-            </div>
-          </div>
+      } else if (parsed.type === 'instagram') {
+        mediaContentHtml = `
+          <iframe
+            src="${parsed.embedUrl}"
+            class="instagram-iframe"
+            scrolling="no"
+            allowtransparency="true"
+            allowfullscreen
+          ></iframe>
         `;
-      }
-
-      // 3. Telegram kanali / posti
-      if (parsed.type === 'telegram') {
-        return `
-          <div class="embed-social-wrap telegram-embed-wrap">
-            <iframe
-              src="${parsed.embedUrl}"
-              class="telegram-iframe"
-              scrolling="no"
-              allowfullscreen
-            ></iframe>
-            <div class="video-direct-link">
-              <a href="${article.sourceUrl || article.videoUrl}" target="_blank" rel="noopener noreferrer">
-                ✈️ Telegram kanalida ko‘rish ↗
-              </a>
-            </div>
-          </div>
+      } else if (parsed.type === 'telegram') {
+        mediaContentHtml = `
+          <iframe
+            src="${parsed.embedUrl}"
+            class="telegram-iframe"
+            scrolling="no"
+            allowfullscreen
+          ></iframe>
         `;
-      }
+      } else {
+        const fileId = article.videoUrl.startsWith('idb://') ? article.videoUrl.replace('idb://', '') : null;
+        const videoSrc = fileId ? (mediaDb.getCachedUrl(fileId) || '') : (parsed?.embedUrl || article.videoUrl);
 
-      // 4. Mahalliy video (IndexedDB) yoki to'g'ridan-to'g'ri MP4 / WebM
-      const fileId = article.videoUrl.startsWith('idb://') ? article.videoUrl.replace('idb://', '') : null;
-      const videoSrc = fileId ? (mediaDb.getCachedUrl(fileId) || '') : (parsed?.embedUrl || article.videoUrl);
-
-      return `
-        <div class="local-cinema-frame">
+        mediaContentHtml = `
           <video
             id="activeArticleVideoPlayer"
             src="${videoSrc}"
@@ -1617,27 +1604,34 @@ class AntivirusApp {
             playsinline
             class="local-clean-video"
           ></video>
-        </div>
-      `;
-    }
-
-    // 5. Rasmli xabar (Estetik, proporsional va o'lchamga moslashuvchan)
-    const activeRatio = this.activePhotoRatio || article.aspectRatio || '16:9';
-    const normRatio = activeRatio.replace(':', '-');
-
-    return `
-      <div class="article-photo-frame ratio-${normRatio}" id="activeArticlePhotoFrame">
-        <div class="article-photo-backdrop" style="background-image: url('${article.imageUrl}');"></div>
+        `;
+      }
+    } else {
+      mediaContentHtml = `
         <img
           id="activeArticleCleanPhoto"
           src="${article.imageUrl}"
           alt="${article.title}"
-          class="article-clean-photo ratio-${normRatio}"
-          title="Bosing: Asl o‘lcham / 16:9 o‘rtasida almashtirish"
+          class="article-clean-photo"
+          title="Bosing: O‘lchamni almashtirish"
           loading="eager"
         />
-        <div class="article-photo-toolbar">
-          <div class="photo-toolbar-glass">
+      `;
+    }
+
+    return `
+      <div class="article-media-stage ratio-${normRatio} media-type-${isVideo ? 'video' : 'photo'}" id="activeArticleMediaStage">
+        <!-- 1. Ambient Blurred Backdrop (Chetdagi bo'shliqlarni estetik to'ldiruvchi fon) -->
+        <div class="article-media-backdrop" style="background-image: url('${article.imageUrl}');"></div>
+
+        <!-- 2. Asosiy Markaziy Ko'rish Darchasi -->
+        <div class="article-media-viewport ratio-${normRatio}">
+          ${mediaContentHtml}
+        </div>
+
+        <!-- 3. Interaktiv Format Tanlagich (Barcha video va rasmlar uchun tezkor o'lcham tugmalari) -->
+        <div class="article-media-toolbar">
+          <div class="media-toolbar-glass">
             <button
               type="button"
               class="photo-ratio-btn ${activeRatio === '16:9' ? 'active' : ''}"
@@ -1650,9 +1644,17 @@ class AntivirusApp {
               type="button"
               class="photo-ratio-btn ${activeRatio === '3:4' ? 'active' : ''}"
               data-set-photo-ratio="3:4"
-              title="3:4 (Portret / 3 ga 4)"
+              title="3:4 (Portret)"
             >
               📷 3:4
+            </button>
+            <button
+              type="button"
+              class="photo-ratio-btn ${activeRatio === '9:16' ? 'active' : ''}"
+              data-set-photo-ratio="9:16"
+              title="9:16 (Tik / Shorts / Reels)"
+            >
+              📱 9:16
             </button>
             <button
               type="button"
@@ -1668,7 +1670,7 @@ class AntivirusApp {
               data-set-photo-ratio="auto"
               title="Asl o‘lcham (To‘liq ko‘rish)"
             >
-              🔍 Asl o‘lcham
+              🔍 Asl
             </button>
           </div>
         </div>
