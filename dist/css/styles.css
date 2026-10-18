@@ -3693,3 +3693,461 @@ button {
     max-width: 1060px !important;
   }
 }
+
+/* =========================================================================
+   GOOGLE AUTH & USER PROFILE STYLES
+   ========================================================================= */
+
+/* Header Google Kirish tugmasi */
+.header-google-login-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.header-google-login-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--an-red);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.15);
+}
+
+.header-google-login-btn:active {
+  transform: translateY(0);
+}
+
+/* User Avatar Header Tugmasi */
+.user-profile-header-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar-header-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--an-red);
+  background: var(--bg-card);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(229, 9, 20, 0.25);
+}
+
+.user-avatar-header-btn:hover {
+  transform: scale(1.06);
+  border-color: #EF4444;
+}
+
+.header-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-online-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  background: #22C55E;
+  border: 2px solid var(--bg-card);
+  border-radius: 50%;
+}
+
+/* User Profile Dropdown */
+.user-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  padding: 12px;
+  z-index: 1100;
+  display: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.user-profile-dropdown.open {
+  display: block;
+}
+
+.user-profile-dropdown-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(229, 9, 20, 0.06);
+  border-radius: 12px;
+  border: 1px solid rgba(229, 9, 20, 0.12);
+  margin-bottom: 8px;
+}
+
+.dropdown-avatar-lg {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--an-red);
+}
+
+.user-dropdown-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-dropdown-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-dropdown-email {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.google-verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: rgba(66, 133, 244, 0.12);
+  color: #4285F4;
+  font-weight: 700;
+}
+
+.user-dropdown-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-dropdown-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.user-dropdown-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--an-red);
+}
+
+.user-dropdown-action-btn.logout-btn {
+  color: #EF4444;
+}
+
+.user-dropdown-action-btn.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #DC2626;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+/* Menu View Google Kirish Banneri */
+.menu-google-login-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.12) 0%, rgba(234, 67, 53, 0.08) 100%);
+  border: 1px solid rgba(66, 133, 244, 0.28);
+  border-radius: 14px;
+  margin-bottom: 14px;
+  transition: all 0.2s;
+}
+
+.menu-google-login-card:hover {
+  border-color: #4285F4;
+  transform: translateY(-1px);
+}
+
+.menu-google-login-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menu-google-login-info {
+  flex: 1;
+}
+
+.menu-google-login-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.menu-google-login-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.menu-google-pill-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #4285F4;
+  color: #FFFFFF;
+  border: none;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.35);
+}
+
+/* Menu View Logged-In User Banner */
+.menu-user-profile-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  margin-bottom: 14px;
+}
+
+.menu-user-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menu-user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--an-red);
+}
+
+.menu-user-online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background: #22C55E;
+  border: 2px solid var(--bg-card);
+  border-radius: 50%;
+}
+
+.menu-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-user-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-user-email {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.google-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4285F4;
+  background: rgba(66, 133, 244, 0.1);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.menu-logout-quick-btn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.menu-logout-quick-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+/* Auth Modal Styles */
+.auth-modal-dialog {
+  background: var(--bg-card);
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.auth-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-google-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-header-title {
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.auth-header-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin: 2px 0 0;
+}
+
+.auth-perks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  background: var(--bg-pill);
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.auth-perk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.btn-google-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 30px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-weight: 700;
+  font-size: 13.5px;
+  border: 1px solid #D1D5DB;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-google-action:hover {
+  background: #F9FAFB;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+
+.btn-google-action:active {
+  transform: translateY(0);
+}
+
+.auth-logged-in-box {
+  text-align: center;
+  padding: 10px 0;
+}
+
+.auth-avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--an-red);
+  margin: 0 auto;
+  box-shadow: 0 8px 24px rgba(229, 9, 20, 0.25);
+}

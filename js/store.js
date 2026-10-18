@@ -11,6 +11,8 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'antivirus_notifications',
   CF_API_URL: 'antivirus_cloudflare_api_url',
   DELETED_IDS: 'antivirus_news_deleted_ids',
+  USER: 'antivirus_auth_user',
+  GOOGLE_CLIENT_ID: 'antivirus_google_client_id'
 };
 
 // Cloudflare D1 Bazasining Doimiy Rekvizitlari
@@ -454,6 +456,72 @@ class NewsStore {
     return saved.includes(id);
   }
 
+  // =========================================================================
+  // FOYDALANUVCHI VA GOOGLE AUTH METODLARI
+  // =========================================================================
+
+  getUser() {
+    try {
+      if (typeof localStorage === 'undefined') return null;
+      const data = localStorage.getItem(STORAGE_KEYS.USER);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  setUser(user) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      }
+      this.addNotification({
+        title: 'Xush kelibsiz!',
+        text: `${user.name || 'Foydalanuvchi'} (Google) orqali tizimga kirdingiz`,
+        time: 'Hozirgina'
+      });
+      this.notify();
+    } catch (e) {
+      console.error('Foydalanuvchini saqlashda xatolik:', e);
+    }
+  }
+
+  logout() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEYS.USER);
+      }
+      this.addNotification({
+        title: 'Tizimdan chiqildi',
+        text: 'Google hisobingizdan muvaffaqiyatli chiqdingiz',
+        time: 'Hozirgina'
+      });
+      this.notify();
+    } catch (e) {
+      console.error('Chiqishda xatolik:', e);
+    }
+  }
+
+  getGoogleClientId() {
+    try {
+      if (typeof localStorage === 'undefined') return '';
+      return localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  setGoogleClientId(clientId) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.GOOGLE_CLIENT_ID, (clientId || '').trim());
+      }
+      this.notify();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   incrementViews(id) {
     const list = this.getNews();
     const item = list.find(n => n.id === id);
@@ -492,7 +560,7 @@ class NewsStore {
       imageUrl: newsData.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80',
       summary: newsData.summary || '',
       content: newsData.content || '',
-      author: newsData.author || 'ANTIVIRUS Tahririyati',
+      author: newsData.author || (this.getUser() ? this.getUser().name : 'ANTIVIRUS Tahririyati'),
       // Qaysi saytdan olingani (Manba va uning havolasi)
       source: newsData.source || 'ANTIVIRUS Tahririyati',
       sourceUrl: newsData.sourceUrl || '',
