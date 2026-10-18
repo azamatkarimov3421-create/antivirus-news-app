@@ -2025,6 +2025,18 @@ button {
   color: #FFFFFF;
 }
 
+.tool-action-btn.delete-btn-tool {
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.tool-action-btn.delete-btn-tool:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+  border-color: #EF4444;
+}
+
 /* Toast xabar */
 .clean-toast-badge {
   position: fixed;

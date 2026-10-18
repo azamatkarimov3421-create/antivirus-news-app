@@ -1339,12 +1339,15 @@ class AntivirusApp {
       ` : ''}
 
       <div class="article-action-tools-row">
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="tool-action-btn ${isSaved ? 'saved' : ''}" id="articleBookmarkBtn">
             ${Icons.bookmark} <span>${isSaved ? 'Saqlangan' : 'Saqlash'}</span>
           </button>
           <button class="tool-action-btn" id="articleShareBtn">
             ${Icons.share} <span>Ulashish</span>
+          </button>
+          <button class="tool-action-btn delete-btn-tool" id="articleDeleteBtn" data-article-del-id="${article.id}" style="color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35);" title="Ushbu maqolani bazadan butunlay o‘chirish">
+            ${Icons.trash} <span>O‘chirish</span>
           </button>
         </div>
 
@@ -1818,7 +1821,7 @@ class AntivirusApp {
                         <span>${Icons.clock} ${n.time} • ${n.views || 0} ko‘rildi</span>
                       </div>
                     </div>
-                    <button class="btn-del-sm" data-del-news-id="${n.id}">O‘chirish</button>
+                    <button type="button" class="btn-del-sm" data-del-news-id="${n.id}" title="Ushbu yangilikni bazadan butunlay o‘chirish">O‘chirish</button>
                   </div>
                 `).join('')}
               </div>
@@ -2357,20 +2360,42 @@ class AntivirusApp {
       this.openArticle(created.id);
     });
 
-    // 9c. Maqolani o'chirish (Agar IndexedDB fayli bo'lsa, xotiradan ham tozalash)
+    // 9c. Maqolani o'chirish (Admin modal "Barchasi" ro'yxatidan butunlay o'chirish)
     document.querySelectorAll('[data-del-news-id]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const id = e.currentTarget.getAttribute('data-del-news-id');
-        if (id && confirm('Ushbu yangilikni bazadan o‘chirmoqchimisiz?')) {
-          const article = store.getNewsById(id);
-          if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
-            const fileId = article.videoUrl.replace('idb://', '');
-            await mediaDb.deleteMedia(fileId);
-          }
-          await store.deleteNews(id);
-          this.showToast('🗑️ Maqola bazadan o‘chirildi');
-          this.render();
+        if (!id) return;
+
+        // 1-bosqich: Qizil tasdiqlash holatiga o'tkazish (brauzer dialog bloklanishlaridan holi)
+        if (e.currentTarget.getAttribute('data-confirming') !== 'true') {
+          e.currentTarget.setAttribute('data-confirming', 'true');
+          e.currentTarget.style.background = '#EF4444';
+          e.currentTarget.style.color = '#FFFFFF';
+          e.currentTarget.style.borderColor = '#EF4444';
+          e.currentTarget.textContent = 'Aniqmi? Ha';
+          setTimeout(() => {
+            if (e.currentTarget && e.currentTarget.getAttribute('data-confirming') === 'true') {
+              e.currentTarget.removeAttribute('data-confirming');
+              e.currentTarget.style.background = '';
+              e.currentTarget.style.color = '';
+              e.currentTarget.style.borderColor = '';
+              e.currentTarget.textContent = 'O‘chirish';
+            }
+          }, 4000);
+          return;
         }
+
+        // 2-bosqich: Haqiqatda butunlay o'chirish
+        const article = store.getNewsById(id);
+        if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
+          const fileId = article.videoUrl.replace('idb://', '');
+          try { await mediaDb.deleteMedia(fileId); } catch {}
+        }
+        await store.deleteNews(id);
+        this.showToast('🗑️ Maqola bazadan butunlay o‘chirildi');
+        this.render();
       });
     });
 
@@ -2522,6 +2547,46 @@ class AntivirusApp {
       const art = store.getNewsById(this.activeArticleId);
       if (art) this.shareArticle(art);
     });
+
+    // 17b. Maqolani o'qish oynasidan (Reader Modal) to'g'ridan-to'g'ri o'chirish
+    const articleDelBtn = document.getElementById('articleDeleteBtn');
+    if (articleDelBtn) {
+      articleDelBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = articleDelBtn.getAttribute('data-article-del-id');
+        if (!id) return;
+
+        // 1-bosqich: Tasdiqlash holati
+        if (articleDelBtn.getAttribute('data-confirming') !== 'true') {
+          articleDelBtn.setAttribute('data-confirming', 'true');
+          articleDelBtn.style.background = '#EF4444';
+          articleDelBtn.style.color = '#FFFFFF';
+          articleDelBtn.style.borderColor = '#EF4444';
+          articleDelBtn.innerHTML = `<span>⚠️ Aniq o‘chirilsinmi? (Ha)</span>`;
+          setTimeout(() => {
+            if (articleDelBtn && articleDelBtn.getAttribute('data-confirming') === 'true') {
+              articleDelBtn.removeAttribute('data-confirming');
+              articleDelBtn.style.background = '';
+              articleDelBtn.style.color = '';
+              articleDelBtn.style.borderColor = '';
+              articleDelBtn.innerHTML = `${Icons.trash} <span>O‘chirish</span>`;
+            }
+          }, 4000);
+          return;
+        }
+
+        // 2-bosqich: Haqiqatda bazadan to'liq o'chirish
+        const article = store.getNewsById(id);
+        if (article && article.videoUrl && article.videoUrl.startsWith('idb://')) {
+          const fileId = article.videoUrl.replace('idb://', '');
+          try { await mediaDb.deleteMedia(fileId); } catch {}
+        }
+        await store.deleteNews(id);
+        this.closeArticle();
+        this.showToast('🗑️ Maqola bazadan butunlay o‘chirildi');
+      });
+    }
 
     // 18. Hero Slayder nuqtalarini bosish
     document.querySelectorAll('[data-slide-index]').forEach(dot => {

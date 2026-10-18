@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   ADS: 'antivirus_ads',
   NOTIFICATIONS: 'antivirus_notifications',
   CF_API_URL: 'antivirus_cloudflare_api_url',
+  DELETED_IDS: 'antivirus_news_deleted_ids',
 };
 
 // Cloudflare D1 Bazasining Doimiy Rekvizitlari
@@ -28,21 +29,42 @@ class NewsStore {
     this.init();
   }
 
+  getDeletedIds() {
+    try {
+      if (typeof localStorage === 'undefined') return [];
+      const stored = localStorage.getItem(STORAGE_KEYS.DELETED_IDS);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
   init() {
     try {
+      const deletedIds = this.getDeletedIds();
       const storedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
       if (!storedNews) {
-        const enriched = INITIAL_NEWS.map(n => ({
-          ...n,
-          aspectRatio: n.aspectRatio || '16:9',
-          source: n.source || 'ANTIVIRUS Tahririyati',
-          sourceUrl: n.sourceUrl || ''
-        }));
+        const enriched = INITIAL_NEWS
+          .filter(n => !deletedIds.includes(n.id))
+          .map(n => ({
+            ...n,
+            aspectRatio: n.aspectRatio || '16:9',
+            source: n.source || 'ANTIVIRUS Tahririyati',
+            sourceUrl: n.sourceUrl || ''
+          }));
         localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(enriched));
       } else {
         try {
-          const currentList = JSON.parse(storedNews);
+          let currentList = JSON.parse(storedNews);
           let updated = false;
+
+          // Agar o'chirilgan maqola avvaldan ro'yxatda qolib ketgan bo'lsa, uni tozalaymiz
+          const initialCount = currentList.length;
+          currentList = currentList.filter(item => !deletedIds.includes(item.id));
+          if (currentList.length !== initialCount) {
+            updated = true;
+          }
+
           currentList.forEach(item => {
             if (!item.aspectRatio) {
               const initMatch = INITIAL_NEWS.find(n => n.id === item.id);
@@ -50,7 +72,10 @@ class NewsStore {
               updated = true;
             }
           });
+
+          // INITIAL_NEWS dan faqat FOYDALANUVCHI O'CHIRMAGAN maqolalarni kiritish
           INITIAL_NEWS.forEach(initItem => {
+            if (deletedIds.includes(initItem.id)) return;
             if (!currentList.some(n => n.id === initItem.id)) {
               currentList.push({
                 ...initItem,
@@ -225,10 +250,12 @@ class NewsStore {
       if (res.ok) {
         const cloudNews = await res.json();
         if (Array.isArray(cloudNews) && cloudNews.length > 0) {
-          // Baza ma'lumotlarini har ehtimolga qarshi mahalliy zaxiraga ham yozamiz!
-          localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(cloudNews));
+          // O'chirilgan maqolalar qaytib kelmasligini kafolatlash
+          const deletedIds = this.getDeletedIds();
+          const filtered = cloudNews.filter(n => !deletedIds.includes(n.id));
+          localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(filtered));
           this.notify();
-          return cloudNews;
+          return filtered;
         }
       }
     } catch (err) {
@@ -286,12 +313,15 @@ class NewsStore {
 
   // Barcha yangiliklar eng oxirgi qo'yilganlar tartibida (xronologik, eng yangisi oldinda)
   getNews() {
+    const deletedIds = this.getDeletedIds();
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.NEWS);
       const list = stored ? JSON.parse(stored) : INITIAL_NEWS;
-      return [...list].sort((a, b) => this.compareNewest(a, b));
+      const filtered = list.filter(n => !deletedIds.includes(n.id));
+      return [...filtered].sort((a, b) => this.compareNewest(a, b));
     } catch {
-      return [...INITIAL_NEWS].sort((a, b) => this.compareNewest(a, b));
+      const filtered = INITIAL_NEWS.filter(n => !deletedIds.includes(n.id));
+      return [...filtered].sort((a, b) => this.compareNewest(a, b));
     }
   }
 
@@ -308,6 +338,9 @@ class NewsStore {
   }
 
   getNewsById(id) {
+    if (!id) return null;
+    const deletedIds = this.getDeletedIds();
+    if (deletedIds.includes(id)) return null;
     const list = this.getNews();
     return list.find(item => item.id === id);
   }
@@ -455,11 +488,31 @@ class NewsStore {
   }
 
   async deleteNews(id) {
+    if (!id) return;
+
+    // 1. O'chirilganlar ro'yxatiga qo'shish (hech qachon qayta tiklanmasligi uchun Blacklist)
+    const deleted = this.getDeletedIds();
+    if (!deleted.includes(id)) {
+      deleted.push(id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(deleted));
+    }
+
+    // 2. Mahalliy xotiradagi asosiy ro'yxatdan tozalash
     let list = this.getNews();
     list = list.filter(n => n.id !== id);
     localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(list));
+
+    // 3. Saqlangan xabarlar (Bookmarks) ro'yxatidan ham tozalash
+    let saved = this.getSavedIds();
+    if (saved.includes(id)) {
+      saved = saved.filter(savedId => savedId !== id);
+      localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(saved));
+    }
+
+    // 4. Interfeysni darhol yangilash
     this.notify();
 
+    // 5. Cloudflare D1 server bazasidan ham o'chirish
     const apiUrl = this.getApiUrl();
     if (apiUrl) {
       try {
@@ -533,6 +586,7 @@ class NewsStore {
   }
 
   resetToDefaults() {
+    localStorage.removeItem(STORAGE_KEYS.DELETED_IDS);
     localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(INITIAL_NEWS));
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
     localStorage.setItem(STORAGE_KEYS.ADS, JSON.stringify(INITIAL_ADS));
