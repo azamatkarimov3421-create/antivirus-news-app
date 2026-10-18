@@ -24,6 +24,9 @@ export const CLOUDFLARE_CONFIG = {
   freeLimitFormatted: '5.00 GB'
 };
 
+// Rasmiy Google OAuth 2.0 Web Client ID
+export const DEFAULT_GOOGLE_CLIENT_ID = '688940162351-gl0aggpuls18cee908jnm401450npi7u.apps.googleusercontent.com';
+
 export const DEMO_IDS = [
   'an-001', 'an-002', 'an-003', 'an-004', 'an-005',
   'an-006', 'an-007', 'an-008', 'an-009', 'an-010'
@@ -504,10 +507,11 @@ class NewsStore {
 
   getGoogleClientId() {
     try {
-      if (typeof localStorage === 'undefined') return '';
-      return localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID) || '';
+      if (typeof localStorage === 'undefined') return DEFAULT_GOOGLE_CLIENT_ID;
+      const custom = localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID);
+      return (custom && custom.trim()) ? custom.trim() : DEFAULT_GOOGLE_CLIENT_ID;
     } catch {
-      return '';
+      return DEFAULT_GOOGLE_CLIENT_ID;
     }
   }
 

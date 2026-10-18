@@ -481,11 +481,17 @@ class AntivirusApp {
   }
 
   setupGoogleIdentityBtn() {
-    setTimeout(() => {
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    const tryInit = () => {
+      attempts++;
       const clientId = store.getGoogleClientId();
       const container = document.getElementById('googleOfficialBtnContainer');
+
       if (window.google?.accounts?.id && clientId && container) {
         try {
+          container.innerHTML = '';
           window.google.accounts.id.initialize({
             client_id: clientId,
             callback: (response) => {
@@ -507,6 +513,7 @@ class AntivirusApp {
               }
             }
           });
+
           window.google.accounts.id.renderButton(container, {
             theme: store.getTheme() === 'dark' ? 'filled_black' : 'outline',
             size: 'large',
@@ -514,13 +521,17 @@ class AntivirusApp {
             shape: 'pill',
             text: 'signin_with',
             logo_alignment: 'left',
-            width: 280
+            width: 300
           });
         } catch (e) {
           console.warn('Google Identity Services sozlashda ogohlantirish:', e);
         }
+      } else if (attempts < maxAttempts && this.isAuthModalOpen) {
+        setTimeout(tryInit, 180);
       }
-    }, 120);
+    };
+
+    setTimeout(tryInit, 80);
   }
 
   toggleAudio(text) {
