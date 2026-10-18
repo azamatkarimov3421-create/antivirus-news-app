@@ -28,7 +28,7 @@ export const CLOUDFLARE_CONFIG = {
 // Rasmiy Google OAuth 2.0 Web Client ID
 export const DEFAULT_GOOGLE_CLIENT_ID = '688940162351-gl0aggpuls18cee908jnm401450npi7u.apps.googleusercontent.com';
 
-export const DEMO_IDS = INITIAL_NEWS.map(n => n.id);
+export const DEMO_IDS = [];
 
 class NewsStore {
   constructor() {
@@ -97,7 +97,7 @@ class NewsStore {
 
   init() {
     try {
-      const deletedIds = this.getDeletedIds();
+      let deletedIds = this.getDeletedIds();
 
       const storedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
       let currentList = [];
@@ -109,19 +109,26 @@ class NewsStore {
         }
       }
 
-      // Agar bazada yangiliklar bo'sh bo'lsa yoki hali yuklanmagan bo'lsa, demo xabarlarni to'liq yuklaymiz!
-      if (!storedNews || !Array.isArray(currentList) || currentList.length === 0) {
+      const initialIds = new Set(INITIAL_NEWS.map(n => n.id));
+      const hasAnyVisible = Array.isArray(currentList) && currentList.some(n => !deletedIds.includes(n.id));
+
+      // Agar bazada yangiliklar bo'sh bo'lsa yoki barchasi avvalgi blacklistda bo'lib qolgan bo'lsa:
+      if (!storedNews || !Array.isArray(currentList) || currentList.length === 0 || !hasAnyVisible) {
+        // Eski noto'g'ri o'chirilganlar ro'yxatidan dastlabki yangiliklarni tozalaymiz
+        deletedIds = deletedIds.filter(id => !initialIds.has(id));
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(deletedIds));
+        }
         currentList = [...INITIAL_NEWS];
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
-          localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify([]));
         }
       } else {
-        // Yangi boy demo xabarlarni xotiraga qo'shib boyitamiz
+        // Yangi xabarlarni xotiradagi ro'yxatga qo'shamiz (agar foydalanuvchi ataylab o'chirmagan bo'lsa)
         const existingIds = new Set(currentList.map(n => n.id));
         const toAdd = INITIAL_NEWS.filter(n => !existingIds.has(n.id) && !deletedIds.includes(n.id));
         if (toAdd.length > 0) {
-          currentList = [...currentList, ...toAdd];
+          currentList = [...toAdd, ...currentList];
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
           }
@@ -287,9 +294,9 @@ class NewsStore {
       if (res.ok) {
         const cloudNews = await res.json();
         if (Array.isArray(cloudNews) && cloudNews.length > 0) {
-          // O'chirilgan va demo maqolalar qaytib kelmasligini kafolatlash
+          // O'chirilgan maqolalar qaytib kelmasligini kafolatlash
           const deletedIds = this.getDeletedIds();
-          const filtered = cloudNews.filter(n => !deletedIds.includes(n.id) && !DEMO_IDS.includes(n.id));
+          const filtered = cloudNews.filter(n => !deletedIds.includes(n.id));
 
           // Mahalliy qo'shilgan yangiliklar o'chib ketmasligi uchun birlashtirish (Merge)
           const localNews = this.getNews();
@@ -298,7 +305,7 @@ class NewsStore {
           filtered.forEach(item => map.set(item.id, item));
           // Keyin mahalliy qo'shilgan yangiliklar (hech qachon yo'qolmasligi uchun)
           localNews.forEach(item => {
-            if (!deletedIds.includes(item.id) && !DEMO_IDS.includes(item.id)) {
+            if (!deletedIds.includes(item.id)) {
               map.set(item.id, { ...(map.get(item.id) || {}), ...item });
             }
           });
@@ -366,11 +373,14 @@ class NewsStore {
     const deletedIds = this.getDeletedIds();
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.NEWS);
-      const list = stored ? JSON.parse(stored) : [];
-      const filtered = list.filter(n => !deletedIds.includes(n.id) && !DEMO_IDS.includes(n.id));
+      let list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list) || list.length === 0) {
+        list = [...INITIAL_NEWS];
+      }
+      const filtered = list.filter(n => !deletedIds.includes(n.id));
       return [...filtered].sort((a, b) => this.compareNewest(a, b));
     } catch {
-      return [];
+      return [...INITIAL_NEWS];
     }
   }
 
@@ -387,11 +397,11 @@ class NewsStore {
   }
 
   getNewsById(id) {
-    if (!id || DEMO_IDS.includes(id)) return null;
+    if (!id) return null;
     const deletedIds = this.getDeletedIds();
     if (deletedIds.includes(id)) return null;
     const list = this.getNews();
-    return list.find(item => item.id === id);
+    return list.find(item => item.id === id) || null;
   }
 
   getCategories() {

@@ -1036,22 +1036,17 @@ class AntivirusApp {
             <div class="empty-state-card" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: 14px; border: 1px dashed var(--border-subtle); margin: 20px 0;">
               <div class="empty-state-icon" style="font-size: 40px; margin-bottom: 12px;">📰</div>
               <h3 class="empty-state-title" style="font-size: 17px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
-                ${this.searchQuery ? 'Hech qanday yangilik topilmadi' : 'Baza toza — Yangi xabar qo‘shing'}
+                ${this.searchQuery ? 'Hech qanday yangilik topilmadi' : 'Hozircha yangiliklar yo‘q'}
               </h3>
               <p class="empty-state-desc" style="font-size: 13px; color: var(--text-dim); max-width: 440px; margin: 0 auto 18px;">
-                ${this.searchQuery ? `"${this.searchQuery}" so‘rovi bo‘yicha hech qanday xabar chiqmadi.` : 'Eski demo xabarlar butunlay tozalandi. O‘zingiz xohlagan yangilik yoki video reportajni kiritishingiz mumkin.'}
+                ${this.searchQuery ? `"${this.searchQuery}" so‘rovi bo‘yicha hech qanday xabar chiqmadi.` : 'O‘zingiz xohlagan yangilik yoki video reportajni kiritishingiz mumkin.'}
               </p>
               ${this.searchQuery ? `
                 <button class="btn-primary-red" id="resetSearchQueryBtn2" style="max-width: 240px; margin: 0 auto;">Barcha yangiliklarga qaytish</button>
               ` : `
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                  <button class="btn-primary-red" id="emptyStateAddBtn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span>✍️ Yangi xabar qo‘shish</span>
-                  </button>
-                  <button class="btn-outline-pill" id="emptyStateRestoreBtn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: #22C55E; color: #22C55E;">
-                    <span>📥 Demo xabarlarni yuklash</span>
-                  </button>
-                </div>
+                <button class="btn-primary-red" id="emptyStateAddBtn" style="max-width: 260px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                  <span>✍️ Yangi xabar qo‘shish</span>
+                </button>
               `}
             </div>
           ` : `
@@ -2201,14 +2196,6 @@ class AntivirusApp {
             <div class="admin-modal-body">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                 <span class="form-label" style="margin-bottom: 0;">Bazadagi barcha xabarlar (${newsList.length})</span>
-                <div style="display: flex; gap: 8px;">
-                  <button type="button" class="btn-del-sm" id="cfRestoreDemosBtn" style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.4); padding: 5px 12px; font-weight: 700; cursor: pointer; border-radius: 6px;">
-                    📥 Demolarni yuklash
-                  </button>
-                  <button type="button" class="btn-del-sm" id="cfPurgeAllDemosBtn" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 5px 12px; font-weight: 700; cursor: pointer; border-radius: 6px;">
-                    🧹 Demolarni tozalash
-                  </button>
-                </div>
               </div>
 
               <div class="admin-news-table-wrap">
@@ -3007,25 +2994,7 @@ class AntivirusApp {
       });
     });
 
-    // 9e. Barcha demo xabarlarni bitta tugmada tozalash
-    document.getElementById('cfPurgeAllDemosBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      store.purgeAllDemoNews();
-      this.showToast('🧹 Barcha eski demo xabarlar butunlay tozalandi!');
-      this.render();
-    });
 
-    // 9e-2. Yangi boy demo xabarlarni yuklash
-    const handleRestoreDemos = (e) => {
-      e?.preventDefault();
-      e?.stopPropagation();
-      store.restoreDemoNews();
-      this.showToast('📥 12 ta yangi boy demo xabarlar muvaffaqiyatli yuklandi!');
-      this.render();
-    };
-    document.getElementById('cfRestoreDemosBtn')?.addEventListener('click', handleRestoreDemos);
-    document.getElementById('emptyStateRestoreBtn')?.addEventListener('click', handleRestoreDemos);
 
     // 9f. Bo'sh holatda birinchi yangilikni qo'shish tugmasi
     document.getElementById('emptyStateAddBtn')?.addEventListener('click', (e) => {
