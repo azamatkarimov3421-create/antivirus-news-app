@@ -28,10 +28,7 @@ export const CLOUDFLARE_CONFIG = {
 // Rasmiy Google OAuth 2.0 Web Client ID
 export const DEFAULT_GOOGLE_CLIENT_ID = '688940162351-gl0aggpuls18cee908jnm401450npi7u.apps.googleusercontent.com';
 
-export const DEMO_IDS = [
-  'an-001', 'an-002', 'an-003', 'an-004', 'an-005',
-  'an-006', 'an-007', 'an-008', 'an-009', 'an-010'
-];
+export const DEMO_IDS = INITIAL_NEWS.map(n => n.id);
 
 class NewsStore {
   constructor() {
@@ -50,9 +47,25 @@ class NewsStore {
     }
   }
 
+  restoreDemoNews() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify([]));
+    }
+    const currentList = this.getNews();
+    const existingIds = new Set(currentList.map(n => n.id));
+    const toAdd = INITIAL_NEWS.filter(n => !existingIds.has(n.id));
+    const merged = [...toAdd, ...currentList];
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(merged));
+    }
+    this.notify();
+    return merged;
+  }
+
   purgeAllDemoNews() {
+    const demoIds = INITIAL_NEWS.map(n => n.id);
     const deletedIds = this.getDeletedIds();
-    DEMO_IDS.forEach(id => {
+    demoIds.forEach(id => {
       if (!deletedIds.includes(id)) deletedIds.push(id);
     });
     if (typeof localStorage !== 'undefined') {
@@ -60,20 +73,20 @@ class NewsStore {
     }
 
     let list = this.getNews();
-    list = list.filter(n => !DEMO_IDS.includes(n.id));
+    list = list.filter(n => !demoIds.includes(n.id));
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(list));
     }
 
     let saved = this.getSavedIds();
-    saved = saved.filter(id => !DEMO_IDS.includes(id));
+    saved = saved.filter(id => !demoIds.includes(id));
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(saved));
     }
 
     const apiUrl = this.getApiUrl();
     if (apiUrl) {
-      DEMO_IDS.forEach(id => {
+      demoIds.forEach(id => {
         fetch(`${apiUrl}/api/news/${id}`, { method: 'DELETE' }).catch(() => {});
       });
     }
@@ -86,18 +99,6 @@ class NewsStore {
     try {
       const deletedIds = this.getDeletedIds();
 
-      // Demo xabarlarni avtomatik ravishda mutlaq o'chirilganlar (Blacklist) qatoriga kiritish
-      let blacklistUpdated = false;
-      DEMO_IDS.forEach(demoId => {
-        if (!deletedIds.includes(demoId)) {
-          deletedIds.push(demoId);
-          blacklistUpdated = true;
-        }
-      });
-      if (blacklistUpdated && typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(deletedIds));
-      }
-
       const storedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
       let currentList = [];
       if (storedNews) {
@@ -108,19 +109,23 @@ class NewsStore {
         }
       }
 
-      // Barcha demo xabarlarni xotiradan butunlay qirib tashlash
-      const beforeClean = currentList.length;
-      currentList = currentList.filter(item => !DEMO_IDS.includes(item.id) && !deletedIds.includes(item.id));
-      if (currentList.length !== beforeClean || !storedNews) {
-        localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
-      }
-
-      // Saqlangan xabarlar (Bookmarks) orasidan ham demo xabarlarni tozalash
-      let saved = this.getSavedIds();
-      const beforeSavedClean = saved.length;
-      saved = saved.filter(id => !DEMO_IDS.includes(id) && !deletedIds.includes(id));
-      if (saved.length !== beforeSavedClean) {
-        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(saved));
+      // Agar bazada yangiliklar bo'sh bo'lsa yoki hali yuklanmagan bo'lsa, demo xabarlarni to'liq yuklaymiz!
+      if (!storedNews || !Array.isArray(currentList) || currentList.length === 0) {
+        currentList = [...INITIAL_NEWS];
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
+          localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify([]));
+        }
+      } else {
+        // Yangi boy demo xabarlarni xotiraga qo'shib boyitamiz
+        const existingIds = new Set(currentList.map(n => n.id));
+        const toAdd = INITIAL_NEWS.filter(n => !existingIds.has(n.id) && !deletedIds.includes(n.id));
+        if (toAdd.length > 0) {
+          currentList = [...currentList, ...toAdd];
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(currentList));
+          }
+        }
       }
 
       if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {

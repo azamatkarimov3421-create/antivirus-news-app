@@ -1044,9 +1044,14 @@ class AntivirusApp {
               ${this.searchQuery ? `
                 <button class="btn-primary-red" id="resetSearchQueryBtn2" style="max-width: 240px; margin: 0 auto;">Barcha yangiliklarga qaytish</button>
               ` : `
-                <button class="btn-primary-red" id="emptyStateAddBtn" style="max-width: 260px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                  <span>✍️ Birinchi xabarni qo‘shish</span>
-                </button>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                  <button class="btn-primary-red" id="emptyStateAddBtn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>✍️ Yangi xabar qo‘shish</span>
+                  </button>
+                  <button class="btn-outline-pill" id="emptyStateRestoreBtn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: #22C55E; color: #22C55E;">
+                    <span>📥 Demo xabarlarni yuklash</span>
+                  </button>
+                </div>
               `}
             </div>
           ` : `
@@ -2196,9 +2201,14 @@ class AntivirusApp {
             <div class="admin-modal-body">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                 <span class="form-label" style="margin-bottom: 0;">Bazadagi barcha xabarlar (${newsList.length})</span>
-                <button type="button" class="btn-del-sm" id="cfPurgeAllDemosBtn" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 5px 12px; font-weight: 700; cursor: pointer; border-radius: 6px;">
-                  🧹 Demo xabarlarni tozalash
-                </button>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn-del-sm" id="cfRestoreDemosBtn" style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.4); padding: 5px 12px; font-weight: 700; cursor: pointer; border-radius: 6px;">
+                    📥 Demolarni yuklash
+                  </button>
+                  <button type="button" class="btn-del-sm" id="cfPurgeAllDemosBtn" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 5px 12px; font-weight: 700; cursor: pointer; border-radius: 6px;">
+                    🧹 Demolarni tozalash
+                  </button>
+                </div>
               </div>
 
               <div class="admin-news-table-wrap">
@@ -3005,6 +3015,17 @@ class AntivirusApp {
       this.showToast('🧹 Barcha eski demo xabarlar butunlay tozalandi!');
       this.render();
     });
+
+    // 9e-2. Yangi boy demo xabarlarni yuklash
+    const handleRestoreDemos = (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+      store.restoreDemoNews();
+      this.showToast('📥 12 ta yangi boy demo xabarlar muvaffaqiyatli yuklandi!');
+      this.render();
+    };
+    document.getElementById('cfRestoreDemosBtn')?.addEventListener('click', handleRestoreDemos);
+    document.getElementById('emptyStateRestoreBtn')?.addEventListener('click', handleRestoreDemos);
 
     // 9f. Bo'sh holatda birinchi yangilikni qo'shish tugmasi
     document.getElementById('emptyStateAddBtn')?.addEventListener('click', (e) => {
