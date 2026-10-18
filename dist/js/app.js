@@ -495,7 +495,7 @@ class AntivirusApp {
     const tryInit = () => {
       attempts++;
       const clientId = store.getGoogleClientId();
-      const container = document.getElementById('googleOfficialBtnContainer');
+      const container = document.getElementById('googleOfficialBtnContainer') || document.getElementById('googleOfficialRegBtnContainer');
 
       if (window.google?.accounts?.id && clientId && container) {
         try {
@@ -506,17 +506,20 @@ class AntivirusApp {
               if (response && response.credential) {
                 const decoded = decodeJwt(response.credential);
                 if (decoded) {
-                  store.setUser({
-                    id: decoded.sub || ('g_' + Date.now()),
+                  const cleanSlug = (decoded.given_name || decoded.name || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '');
+                  const userObj = {
+                    id: decoded.sub || ('g_' + cleanSlug + '_' + Math.floor(1000 + Math.random() * 9000)),
+                    username: cleanSlug,
                     name: decoded.name || decoded.given_name || 'Google Foydalanuvchi',
                     email: decoded.email || '',
                     avatar: decoded.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
                     provider: 'google',
                     verified: Boolean(decoded.email_verified),
                     credential: response.credential
-                  });
+                  };
+                  store.setUser(userObj);
                   this.closeAuthModal();
-                  this.showToast(`🎉 Xush kelibsiz, ${decoded.name || 'Foydalanuvchi'}!`);
+                  this.showToast(`🎉 Xush kelibsiz, ${userObj.name}!`);
                 }
               }
             }
@@ -529,7 +532,7 @@ class AntivirusApp {
             shape: 'pill',
             text: 'signin_with',
             logo_alignment: 'left',
-            width: 300
+            width: 280
           });
         } catch (e) {
           console.warn('Google Identity Services sozlashda ogohlantirish:', e);
@@ -2235,19 +2238,18 @@ class AntivirusApp {
     if (!this.isAuthModalOpen) return '';
 
     const user = store.getUser();
-    const clientId = store.getGoogleClientId();
     const savedCount = store.getSavedIds().length;
 
     return `
       <div class="article-reader-backdrop open" id="authModalBackdrop">
-        <div class="article-reader-modal auth-modal-dialog" id="authModalDialog" style="max-width: 440px; padding: 0; overflow: hidden; border-radius: 24px; box-shadow: 0 25px 60px rgba(0,0,0,0.45);">
+        <div class="article-reader-modal auth-modal-dialog" id="authModalDialog" style="max-width: 420px; padding: 0; overflow: hidden; border-radius: 24px; box-shadow: 0 25px 60px rgba(0,0,0,0.45);">
           <!-- Modal Header -->
           <div class="auth-modal-header">
             <div class="auth-header-brand">
               <div class="auth-brand-badge">AN</div>
               <div>
                 <h3 class="auth-header-title">ANTIVIRUS ID</h3>
-                <p class="auth-header-sub">Shaxsiy hisob va tezkor tizim</p>
+                <p class="auth-header-sub">Shaxsiy hisob tizimi</p>
               </div>
             </div>
             <button type="button" class="close-modal-round" id="closeAuthModalBtn">✕</button>
@@ -2290,7 +2292,7 @@ class AntivirusApp {
               </div>
             </div>
           ` : `
-            <!-- 2 TA ZAMONAVIY REJIM TABI (KIRISH VA TEZKOR RO'YXATDAN O'TISH) -->
+            <!-- 2 TA REJIM TABI (KIRISH VA TEZKOR RO'YXATDAN O'TISH) -->
             <div class="auth-segmented-nav">
               <button type="button" class="auth-segment-btn ${this.authModalTab === 'login' ? 'active' : ''}" id="authTabLoginBtn">
                 🔑 Kirish
@@ -2300,151 +2302,78 @@ class AntivirusApp {
               </button>
             </div>
 
-            <div class="admin-modal-body" style="padding: 14px 20px 20px;">
+            <div class="admin-modal-body" style="padding: 16px 20px 22px;">
               ${this.authModalTab === 'login' ? `
                 <!-- 1. KIRISH REJIMI -->
                 <div class="auth-form-wrap">
                   <div class="auth-field-group">
-                    <label class="auth-field-label">Ismingiz yoki Taxallusingiz (@login)</label>
+                    <label class="auth-field-label">Ismingiz yoki Taxallusingiz</label>
                     <div class="auth-input-wrapper">
                       <span class="auth-input-icon">👤</span>
                       <input
                         type="text"
                         id="authLoginInput"
                         class="auth-text-input"
-                        placeholder="Masalan: azamat yoki sardor"
+                        placeholder="Ismingizni yozing..."
                         autocomplete="username"
                       />
                     </div>
-                    <div class="auth-live-feedback">Oldin ro‘yxatdan o‘tgan ism yoki taxallusingizni kiriting</div>
                   </div>
 
                   <button type="button" class="btn-primary-red auth-submit-btn" id="submitLoginBtn">
-                    <span>🔑 Tizimga Kirish</span>
+                    <span>Kirish</span>
                   </button>
 
                   <div class="auth-divider">
                     <span>YOKI GOOGLE BILAN</span>
                   </div>
 
-                  <!-- Rasmiy Google Identity Tugmasi -->
-                  <div id="googleOfficialBtnContainer" style="display: flex; justify-content: center; margin-bottom: 6px; min-height: 40px;"></div>
-
-                  <!-- 1-Click Tezkor Google Kirish Tugmasi -->
-                  <button type="button" class="btn-google-action" id="fastGoogleLoginBtn">
-                    ${Icons.google}
-                    <span>Google hisobim bilan kirish</span>
-                  </button>
+                  <!-- Yagona rasmiy Google tugmasi -->
+                  <div id="googleOfficialBtnContainer" style="display: flex; justify-content: center; min-height: 42px;"></div>
 
                   <div class="auth-switch-prompt">
-                    Hali hisobingiz yo‘qmi?
+                    Hisobingiz yo‘qmi?
                     <button type="button" class="auth-switch-link" id="switchToRegBtn">Tezkor ro‘yxatdan o‘tish</button>
                   </div>
                 </div>
-              ` : (this.authModalTab === 'register' ? `
+              ` : `
                 <!-- 2. TEZKOR RO'YXATDAN O'TISH REJIMI -->
                 <div class="auth-form-wrap">
-                  <div class="auth-info-banner">
-                    ✨ Istalgan nom tanlang! Har bir foydalanuvchiga <b>takrorlanmas unikal ID</b> beriladi va barcha ma’lumotlaringiz (saqlanganlar, maqolalar) profilingizda to‘g‘ri saqlanadi.
-                  </div>
-
                   <div class="auth-field-group">
                     <label class="auth-field-label">
-                      <span>Unikal Taxallus / Ism (Login)</span>
-                      <span class="auth-status-badge" id="authRegStatusBadge">Majburiy</span>
+                      <span>Ismingiz yoki Taxallusingiz</span>
+                      <span class="auth-status-badge" id="authRegStatusBadge">Istalgan nom</span>
                     </label>
                     <div class="auth-input-wrapper">
-                      <span class="auth-input-icon">@</span>
+                      <span class="auth-input-icon">👤</span>
                       <input
                         type="text"
                         id="authRegUsernameInput"
                         class="auth-text-input"
-                        placeholder="Masalan: azamat, sardor, media..."
+                        placeholder="Ismingizni yozing..."
                         autocomplete="off"
                       />
                     </div>
-                    <div class="auth-live-feedback" id="authRegLiveFeedback">Ism yoki taxallus kiriting (takrorlanmaydigan bo‘lishi shart)</div>
-                  </div>
-
-                  <div class="auth-field-group">
-                    <label class="auth-field-label">To‘liq Ismingiz (Maqolalarda ko‘rinadi)</label>
-                    <div class="auth-input-wrapper">
-                      <span class="auth-input-icon">✍️</span>
-                      <input
-                        type="text"
-                        id="authRegDisplayNameInput"
-                        class="auth-text-input"
-                        placeholder="Masalan: Azamat Karimov"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Avatar tanlash qatori -->
-                  <div class="auth-field-group">
-                    <label class="auth-field-label">Profil Avatari (Bosing va tanlang)</label>
-                    <div class="auth-avatars-row">
-                      ${this.avatarPresets.map((url, idx) => `
-                        <img
-                          src="${url}"
-                          class="auth-avatar-choice ${this.selectedAvatarIndex === idx ? 'selected' : ''}"
-                          data-avatar-preset-idx="${idx}"
-                          alt="Avatar ${idx + 1}"
-                          title="Avatar ${idx + 1}"
-                        />
-                      `).join('')}
-                    </div>
+                    <div class="auth-live-feedback" id="authRegLiveFeedback">Istalgan ism yoki nom yozing</div>
                   </div>
 
                   <button type="button" class="btn-primary-red auth-submit-btn" id="submitRegisterBtn">
-                    <span>🚀 Ro‘yxatdan O‘tish va Kirish</span>
+                    <span>Ro‘yxatdan o‘tish va Kirish</span>
                   </button>
 
                   <div class="auth-divider">
                     <span>YOKI GOOGLE BILAN</span>
                   </div>
 
-                  <button type="button" class="btn-google-action" id="fastGoogleRegBtn">
-                    ${Icons.google}
-                    <span>Google orqali 1-bosishda ochish</span>
-                  </button>
+                  <!-- Yagona rasmiy Google tugmasi -->
+                  <div id="googleOfficialRegBtnContainer" style="display: flex; justify-content: center; min-height: 42px;"></div>
 
                   <div class="auth-switch-prompt">
                     Allaqachon hisobingiz bormi?
                     <button type="button" class="auth-switch-link" id="switchToLoginBtn">Kirish</button>
                   </div>
                 </div>
-              ` : `
-                <!-- DEVELOPER / GOOGLE CLIENT ID SOZLAMASI -->
-                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.4;">
-                  Google OAuth 2.0 Web Client ID sozlamasi:
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Google OAuth 2.0 Web Client ID</label>
-                  <input
-                    type="text"
-                    id="googleClientIdInput"
-                    class="form-input"
-                    value="${clientId}"
-                  />
-                </div>
-
-                <div style="display: flex; gap: 8px;">
-                  <button type="button" class="btn-primary-red" id="saveGoogleClientIdBtn" style="flex: 1;">
-                    <span>💾 Saqlash</span>
-                  </button>
-                  <button type="button" class="btn-outline-pill" id="backToLoginTabBtn">
-                    ← Orqaga
-                  </button>
-                </div>
-              `)}
-
-              <!-- Pastki mayda sozlama havolasi -->
-              <div style="text-align: center; margin-top: 14px;">
-                <button type="button" id="openDevSettingsBtn" style="background: none; border: none; font-size: 10.5px; color: var(--text-dim); cursor: pointer; text-decoration: underline; font-family: inherit;">
-                  ⚙️ Google OAuth sozlamasi
-                </button>
-              </div>
+              `}
             </div>
           `}
         </div>
@@ -3397,41 +3326,19 @@ class AntivirusApp {
     document.getElementById('authTabRegisterBtn')?.addEventListener('click', () => {
       this.authModalTab = 'register';
       this.render();
+      this.setupGoogleIdentityBtn();
     });
 
     document.getElementById('switchToRegBtn')?.addEventListener('click', () => {
       this.authModalTab = 'register';
       this.render();
+      this.setupGoogleIdentityBtn();
     });
 
     document.getElementById('switchToLoginBtn')?.addEventListener('click', () => {
       this.authModalTab = 'login';
       this.render();
       this.setupGoogleIdentityBtn();
-    });
-
-    document.getElementById('openDevSettingsBtn')?.addEventListener('click', () => {
-      this.authModalTab = 'client_id';
-      this.render();
-    });
-
-    document.getElementById('backToLoginTabBtn')?.addEventListener('click', () => {
-      this.authModalTab = 'login';
-      this.render();
-      this.setupGoogleIdentityBtn();
-    });
-
-    // Avatar preset tanlash
-    document.querySelectorAll('[data-avatar-preset-idx]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = parseInt(e.currentTarget.getAttribute('data-avatar-preset-idx'), 10);
-        if (!isNaN(idx)) {
-          this.selectedAvatarIndex = idx;
-          document.querySelectorAll('.auth-avatar-choice').forEach((el, i) => {
-            el.classList.toggle('selected', i === idx);
-          });
-        }
-      });
     });
 
     // Tezkor Ro'yxatdan o'tishda nomning band yoki bo'shligini jonli tekshirish (Unique check)
@@ -3443,10 +3350,10 @@ class AntivirusApp {
       if (!raw) {
         if (feedback) {
           feedback.className = 'auth-live-feedback';
-          feedback.textContent = 'Ism yoki taxallus kiriting (takrorlanmaydigan bo‘lishi shart)';
+          feedback.textContent = 'Istalgan ism yoki nom yozing';
         }
         if (badge) {
-          badge.textContent = 'Majburiy';
+          badge.textContent = 'Istalgan nom';
           badge.style.color = 'var(--text-dim)';
         }
         return;
@@ -3456,7 +3363,7 @@ class AntivirusApp {
       if (clean.length < 2) {
         if (feedback) {
           feedback.className = 'auth-live-feedback error';
-          feedback.textContent = '⚠️ Ism/taxallus kamida 2 ta belgidan iborat bo‘lsin';
+          feedback.textContent = '⚠️ Ism kamida 2 ta belgidan iborat bo‘lsin';
         }
         if (badge) {
           badge.textContent = 'Kalta ⚠️';
@@ -3478,7 +3385,7 @@ class AntivirusApp {
       } else {
         if (feedback) {
           feedback.className = 'auth-live-feedback success';
-          feedback.textContent = `✓ «${clean}» bo‘sh! Ushbu nom bilan unikal ID yaratiladi`;
+          feedback.textContent = `✓ «${clean}» bo‘sh! Ushbu nom bilan unikal ID beriladi`;
         }
         if (badge) {
           badge.textContent = 'Bo‘sh ✓';
@@ -3499,13 +3406,11 @@ class AntivirusApp {
       }
     });
 
-    // 2. Tezkor Ro'yxatdan o'tish tugmasi
+    // 2. Tezkor Ro'yxatdan o'tish tugmasi (Shunchaki ismini yozib kiradi)
     document.getElementById('submitRegisterBtn')?.addEventListener('click', () => {
       const username = document.getElementById('authRegUsernameInput')?.value.trim();
-      const displayName = document.getElementById('authRegDisplayNameInput')?.value.trim();
-      const avatar = this.avatarPresets[this.selectedAvatarIndex] || this.avatarPresets[0];
 
-      const result = store.registerUser({ username, name: displayName, avatar });
+      const result = store.registerUser({ username, name: username });
       if (result.ok) {
         this.closeAuthModal();
         this.showToast(`🎉 Tabriklaymiz, @${result.user.username}! Sizga unikal ID (${result.user.id}) biriktirildi.`);
